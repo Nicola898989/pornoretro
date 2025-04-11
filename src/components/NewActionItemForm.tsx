@@ -3,14 +3,25 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from '@/components/ui/label';
 
-interface NewActionItemFormProps {
-  onAdd: (text: string, assignee: string) => void;
+interface CardInfo {
+  id: string;
+  content: string;
+  type: string;
 }
 
-const NewActionItemForm: React.FC<NewActionItemFormProps> = ({ onAdd }) => {
+interface NewActionItemFormProps {
+  onAdd: (text: string, assignee: string, cardId?: string) => void;
+  cards?: CardInfo[];
+  selectedCardId?: string;
+}
+
+const NewActionItemForm: React.FC<NewActionItemFormProps> = ({ onAdd, cards = [], selectedCardId = '' }) => {
   const [text, setText] = useState('');
   const [assignee, setAssignee] = useState('');
+  const [cardId, setCardId] = useState(selectedCardId);
   const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -25,9 +36,10 @@ const NewActionItemForm: React.FC<NewActionItemFormProps> = ({ onAdd }) => {
       return;
     }
     
-    onAdd(text.trim(), assignee.trim());
+    onAdd(text.trim(), assignee.trim(), cardId || undefined);
     setText('');
     setAssignee('');
+    if (!selectedCardId) setCardId('');
     
     toast({
       title: "Action item added",
@@ -45,13 +57,37 @@ const NewActionItemForm: React.FC<NewActionItemFormProps> = ({ onAdd }) => {
           className="bg-secondary text-pornoretro-gray"
         />
       </div>
-      <div className="flex gap-3">
-        <Input
-          placeholder="Assignee (optional)"
-          value={assignee}
-          onChange={(e) => setAssignee(e.target.value)}
-          className="bg-secondary text-pornoretro-gray"
-        />
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <Input
+            placeholder="Assignee (optional)"
+            value={assignee}
+            onChange={(e) => setAssignee(e.target.value)}
+            className="bg-secondary text-pornoretro-gray"
+          />
+        </div>
+        
+        {!selectedCardId && cards.length > 0 && (
+          <div>
+            <Select value={cardId} onValueChange={setCardId}>
+              <SelectTrigger className="bg-secondary text-pornoretro-gray">
+                <SelectValue placeholder="Link to card (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No linked card</SelectItem>
+                {cards.map((card) => (
+                  <SelectItem key={card.id} value={card.id}>
+                    {card.content.substring(0, 30)}{card.content.length > 30 ? '...' : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+      
+      <div className="flex justify-end">
         <Button 
           type="submit"
           className="bg-pornoretro-orange text-pornoretro-black hover:bg-pornoretro-darkorange"
