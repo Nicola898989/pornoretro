@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Lock } from 'lucide-react';
 
@@ -14,6 +15,7 @@ const NewRetro: React.FC = () => {
   const [retroName, setRetroName] = useState('');
   const [teamName, setTeamName] = useState('');
   const [yourName, setYourName] = useState('');
+  const [isAnonymous, setIsAnonymous] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -45,10 +47,14 @@ const NewRetro: React.FC = () => {
       creator: yourName.trim(),
       createdAt: new Date().toISOString(),
       cards: [],
-      actions: []
+      actions: [],
+      isAnonymous: isAnonymous
     };
     
     localStorage.setItem(`retro_${retroId}`, JSON.stringify(retroData));
+    
+    // Store the user as the creator
+    localStorage.setItem('currentUser', yourName.trim());
     
     toast({
       title: "Retrospective created!",
@@ -108,9 +114,18 @@ const NewRetro: React.FC = () => {
                   />
                 </div>
                 
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="anonymity" className="font-medium text-sm">Make feedback anonymous</Label>
+                  <Switch 
+                    id="anonymity"
+                    checked={isAnonymous}
+                    onCheckedChange={setIsAnonymous}
+                  />
+                </div>
+                
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mt-4">
                   <Lock className="h-4 w-4" />
-                  <p>All participant feedback will remain anonymous</p>
+                  <p>{isAnonymous ? "All participant feedback will remain anonymous" : "Feedback will include participants' names"}</p>
                 </div>
               </CardContent>
               

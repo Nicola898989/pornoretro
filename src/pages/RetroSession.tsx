@@ -10,8 +10,18 @@ import NewActionItemForm from '@/components/NewActionItemForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Share2, Copy, Users } from 'lucide-react';
+import { Share2, Copy, Users, Link2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface RetroCard {
   id: string;
@@ -30,6 +40,7 @@ interface RetroData {
   createdAt: string;
   cards: RetroCard[];
   actions: ActionItemType[];
+  isAnonymous: boolean;
 }
 
 const RetroSession: React.FC = () => {
@@ -40,20 +51,16 @@ const RetroSession: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<string>('');
   const [votedCards, setVotedCards] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [joinDialogOpen, setJoinDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [newUserName, setNewUserName] = useState('');
+  const [retroUrl, setRetroUrl] = useState('');
 
   useEffect(() => {
-    // Get current user
-    const storedUser = localStorage.getItem('currentUser');
-    if (!storedUser) {
-      toast({
-        title: "Not logged in",
-        description: "Please join with your name first",
-        variant: "destructive",
-      });
-      navigate('/join');
-      return;
+    // Set retro URL
+    if (id) {
+      setRetroUrl(`${window.location.origin}/retro/${id}`);
     }
-    setCurrentUser(storedUser);
     
     // Get retro data
     if (id) {
@@ -74,14 +81,23 @@ const RetroSession: React.FC = () => {
         const data = JSON.parse(storedRetro) as RetroData;
         setRetroData(data);
         
-        // Get voted cards for this user
-        const userVotes = new Set<string>();
-        data.cards.forEach(card => {
-          if (card.voterIds && card.voterIds.includes(storedUser)) {
-            userVotes.add(card.id);
-          }
-        });
-        setVotedCards(userVotes);
+        // Check if user is logged in
+        const storedUser = localStorage.getItem('currentUser');
+        if (!storedUser) {
+          // No user found, show join dialog
+          setJoinDialogOpen(true);
+        } else {
+          setCurrentUser(storedUser);
+          
+          // Get voted cards for this user
+          const userVotes = new Set<string>();
+          data.cards.forEach(card => {
+            if (card.voterIds && card.voterIds.includes(storedUser)) {
+              userVotes.add(card.id);
+            }
+          });
+          setVotedCards(userVotes);
+        }
       } catch (e) {
         console.error("Error parsing retro data", e);
         toast({
@@ -96,6 +112,28 @@ const RetroSession: React.FC = () => {
     setLoading(false);
   }, [id, navigate, toast]);
 
+  const handleJoinRetro = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newUserName.trim()) {
+      toast({
+        title: "Please enter your name",
+        description: "We need to know who you are",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    localStorage.setItem('currentUser', newUserName.trim());
+    setCurrentUser(newUserName.trim());
+    setJoinDialogOpen(false);
+    
+    toast({
+      title: "Welcome to the retrospective!",
+      description: `You've joined as ${newUserName.trim()}`,
+    });
+  };
+
   const saveRetroData = (data: RetroData) => {
     localStorage.setItem(`retro_${id}`, JSON.stringify(data));
     setRetroData(data);
@@ -108,7 +146,7 @@ const RetroSession: React.FC = () => {
       id: uuidv4(),
       type,
       content,
-      author: "Anonymous",
+      author: retroData.isAnonymous ? "Anonymous" : currentUser,
       votes: 0,
       voterIds: []
     };
@@ -207,12 +245,12 @@ const RetroSession: React.FC = () => {
   };
 
   const copyRetroLink = () => {
-    const url = `${window.location.origin}/retro/${id}`;
-    navigator.clipboard.writeText(url);
+    navigator.clipboard.writeText(retroUrl);
     toast({
       title: "Link copied!",
       description: "Share this link with your team members",
     });
+    setShareDialogOpen(false);
   };
 
   if (loading) {
@@ -258,19 +296,25 @@ const RetroSession: React.FC = () => {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-pornoretro-orange mb-1">{retroData.name}</h1>
-            <div className="flex items-center text-muted-foreground">
-              <Users className="w-4 h-4 mr-1" />
-              <span>{retroData.team}</span>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center text-muted-foreground">
+                <Users className="w-4 h-4 mr-1" />
+                <span>{retroData.team}</span>
+              </div>
+              <div className="text-muted-foreground text-sm">
+                {retroData.isAnonymous ? 
+                  "Feedback is anonymous" : 
+                  "Feedback includes names"}
+              </div>
             </div>
           </div>
           <Button 
             variant="outline" 
             className="border-pornoretro-orange text-pornoretro-orange hover:bg-pornoretro-orange hover:text-pornoretro-black transition-colors"
-            onClick={copyRetroLink}
+            onClick={() => setShareDialogOpen(true)}
           >
             <Share2 className="w-4 h-4 mr-2" />
             <span className="hidden md:inline">Share</span>
-            <span className="ml-2 hidden md:inline"><Copy className="w-3.5 h-3.5" /></span>
           </Button>
         </div>
         
@@ -443,6 +487,73 @@ const RetroSession: React.FC = () => {
       </main>
       
       <Footer />
+
+      {/* Join Dialog */}
+      <Dialog open={joinDialogOpen} onOpenChange={setJoinDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-pornoretro-orange">Join the Retrospective</DialogTitle>
+            <DialogDescription>
+              Please enter your name to join this hot retrospective session.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleJoinRetro} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Your Name</Label>
+              <Input 
+                id="name" 
+                value={newUserName}
+                onChange={(e) => setNewUserName(e.target.value)}
+                placeholder="e.g. John Developer"
+                className="bg-secondary"
+              />
+            </div>
+            <DialogFooter>
+              <Button 
+                type="submit" 
+                className="bg-pornoretro-orange text-pornoretro-black hover:bg-pornoretro-darkorange"
+              >
+                Join Session
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Share Dialog */}
+      <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-pornoretro-orange">Share Retrospective</DialogTitle>
+            <DialogDescription>
+              Share this link with your team members to invite them to this retro session.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center space-x-2">
+            <div className="grid flex-1 gap-2">
+              <Label htmlFor="link" className="sr-only">Link</Label>
+              <Input
+                id="link"
+                readOnly
+                value={retroUrl}
+                className="bg-secondary"
+              />
+            </div>
+            <Button 
+              size="sm"
+              className="px-3 bg-pornoretro-orange text-pornoretro-black hover:bg-pornoretro-darkorange"
+              onClick={copyRetroLink}
+            >
+              <span className="sr-only">Copy</span>
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <Link2 className="h-4 w-4 text-muted-foreground" />
+            <p className="text-muted-foreground">Anyone with the link can join this retro session</p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
