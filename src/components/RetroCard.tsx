@@ -2,10 +2,16 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { ThumbsUp, MessageCircle, PlusCircle } from 'lucide-react';
+import { ThumbsUp, MessageCircle, PlusCircle, Pencil, Trash, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export type CardType = 'hot' | 'disappointment' | 'fantasy';
 
@@ -26,7 +32,10 @@ interface RetroCardProps {
   onVote: (id: string) => void;
   onAddComment: (id: string, content: string) => void;
   onCreateAction: (cardId: string) => void;
+  onEditComment?: (cardId: string, commentId: string, newContent: string) => void;
+  onDeleteComment?: (cardId: string, commentId: string) => void;
   hasVoted: boolean;
+  currentUser?: string;
 }
 
 const cardStyles = {
@@ -51,10 +60,15 @@ const RetroCard: React.FC<RetroCardProps> = ({
   onVote,
   onAddComment,
   onCreateAction,
-  hasVoted 
+  onEditComment,
+  onDeleteComment,
+  hasVoted,
+  currentUser = '' 
 }) => {
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
+  const [editingComment, setEditingComment] = useState<string | null>(null);
+  const [editedContent, setEditedContent] = useState('');
   
   const handleSubmitComment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +77,31 @@ const RetroCard: React.FC<RetroCardProps> = ({
       setNewComment('');
     }
   };
-
+  
+  const startEditComment = (commentId: string, content: string) => {
+    setEditingComment(commentId);
+    setEditedContent(content);
+  };
+  
+  const cancelEditComment = () => {
+    setEditingComment(null);
+    setEditedContent('');
+  };
+  
+  const saveEditComment = (commentId: string) => {
+    if (onEditComment && editedContent.trim()) {
+      onEditComment(id, commentId, editedContent.trim());
+      setEditingComment(null);
+      setEditedContent('');
+    }
+  };
+  
+  const handleDeleteComment = (commentId: string) => {
+    if (onDeleteComment) {
+      onDeleteComment(id, commentId);
+    }
+  };
+  
   return (
     <Card className={cn("border-2", cardStyles[type])}>
       <CardHeader>
@@ -108,10 +146,9 @@ const RetroCard: React.FC<RetroCardProps> = ({
                 hasVoted ? "bg-pornoretro-orange text-pornoretro-black" : "border-pornoretro-orange text-pornoretro-orange"
               )}
               onClick={() => onVote(id)}
-              disabled={hasVoted}
             >
               <ThumbsUp className="w-4 h-4 mr-1" />
-              {hasVoted ? "Voted" : "Vote"}
+              {hasVoted ? "Remove Vote" : "Vote"}
             </Button>
           </div>
         </div>
@@ -124,13 +161,74 @@ const RetroCard: React.FC<RetroCardProps> = ({
               ) : (
                 comments.map((comment) => (
                   <div key={comment.id} className="bg-secondary/50 p-3 rounded-md">
-                    <div className="flex justify-between">
-                      <p className="text-xs font-medium text-pornoretro-orange">{comment.author}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(comment.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                    <p className="text-sm mt-1">{comment.content}</p>
+                    {editingComment === comment.id ? (
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <p className="text-xs font-medium text-pornoretro-orange">{comment.author}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(comment.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <Textarea
+                          value={editedContent}
+                          onChange={(e) => setEditedContent(e.target.value)}
+                          className="min-h-[60px] bg-secondary/50 text-sm"
+                        />
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs"
+                            onClick={cancelEditComment}
+                          >
+                            <X className="w-3 h-3 mr-1" />
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="bg-pornoretro-orange text-pornoretro-black hover:bg-pornoretro-darkorange text-xs"
+                            onClick={() => saveEditComment(comment.id)}
+                          >
+                            <Check className="w-3 h-3 mr-1" />
+                            Save
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex justify-between">
+                          <p className="text-xs font-medium text-pornoretro-orange">{comment.author}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(comment.createdAt).toLocaleString()}
+                            </p>
+                            {(comment.author === currentUser || comment.author === "Anonymous") && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                    <span className="sr-only">Open menu</span>
+                                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4">
+                                      <path d="M3.625 7.5C3.625 8.12132 3.12132 8.625 2.5 8.625C1.87868 8.625 1.375 8.12132 1.375 7.5C1.375 6.87868 1.87868 6.375 2.5 6.375C3.12132 6.375 3.625 6.87868 3.625 7.5ZM8.625 7.5C8.625 8.12132 8.12132 8.625 7.5 8.625C6.87868 8.625 6.375 8.12132 6.375 7.5C6.375 6.87868 6.87868 6.375 7.5 6.375C8.12132 6.375 8.625 6.87868 8.625 7.5ZM13.625 7.5C13.625 8.12132 13.1213 8.625 12.5 8.625C11.8787 8.625 11.375 8.12132 11.375 7.5C11.375 6.87868 11.8787 6.375 12.5 6.375C13.1213 6.375 13.625 6.87868 13.625 7.5Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+                                    </svg>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => startEditComment(comment.id, comment.content)}>
+                                    <Pencil className="w-4 h-4 mr-2" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleDeleteComment(comment.id)}>
+                                    <Trash className="w-4 h-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-sm mt-1">{comment.content}</p>
+                      </>
+                    )}
                   </div>
                 ))
               )}

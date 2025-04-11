@@ -177,25 +177,46 @@ const RetroSession: React.FC = () => {
   const handleVoteCard = (cardId: string) => {
     if (!retroData) return;
     
-    const updatedCards = retroData.cards.map(card => {
-      if (card.id === cardId) {
-        // If user already voted, do nothing
-        if (card.voterIds && card.voterIds.includes(currentUser)) {
-          return card;
-        }
-        
-        return {
-          ...card,
-          votes: card.votes + 1,
-          voterIds: [...(card.voterIds || []), currentUser]
-        };
-      }
-      return card;
-    });
+    // Find if user already voted for this card
+    const cardIndex = retroData.cards.findIndex(card => card.id === cardId);
+    if (cardIndex === -1) return;
     
-    const updatedVotes = new Set(votedCards);
-    updatedVotes.add(cardId);
-    setVotedCards(updatedVotes);
+    const card = retroData.cards[cardIndex];
+    const userVoted = card.voterIds && card.voterIds.includes(currentUser);
+    
+    // If user already voted, remove the vote
+    // If user hasn't voted, add a vote
+    const updatedCards = [...retroData.cards];
+    if (userVoted) {
+      // Remove vote
+      updatedCards[cardIndex] = {
+        ...card,
+        votes: Math.max(0, card.votes - 1),
+        voterIds: card.voterIds.filter(id => id !== currentUser)
+      };
+      
+      // Remove from voted set
+      const updatedVotes = new Set(votedCards);
+      updatedVotes.delete(cardId);
+      setVotedCards(updatedVotes);
+      
+      toast({
+        title: "Vote removed",
+        description: "Your vote has been removed from this card",
+      });
+    } else {
+      // Add vote
+      updatedCards[cardIndex] = {
+        ...card,
+        votes: card.votes + 1,
+        voterIds: [...(card.voterIds || []), currentUser]
+      };
+      
+      // Add to voted set
+      const updatedVotes = new Set(votedCards);
+      updatedVotes.add(cardId);
+      setVotedCards(updatedVotes);
+    }
     
     const updatedData = {
       ...retroData,
@@ -235,6 +256,68 @@ const RetroSession: React.FC = () => {
     toast({
       title: "Comment added",
       description: "Your comment has been added to the card",
+    });
+  };
+
+  const handleEditComment = (cardId: string, commentId: string, newContent: string) => {
+    if (!retroData) return;
+    
+    const updatedCards = retroData.cards.map(card => {
+      if (card.id === cardId) {
+        const updatedComments = card.comments.map(comment => {
+          if (comment.id === commentId) {
+            return {
+              ...comment,
+              content: newContent,
+            };
+          }
+          return comment;
+        });
+        
+        return {
+          ...card,
+          comments: updatedComments
+        };
+      }
+      return card;
+    });
+    
+    const updatedData = {
+      ...retroData,
+      cards: updatedCards
+    };
+    
+    saveRetroData(updatedData);
+    
+    toast({
+      title: "Comment updated",
+      description: "Your comment has been updated",
+    });
+  };
+  
+  const handleDeleteComment = (cardId: string, commentId: string) => {
+    if (!retroData) return;
+    
+    const updatedCards = retroData.cards.map(card => {
+      if (card.id === cardId) {
+        return {
+          ...card,
+          comments: card.comments.filter(comment => comment.id !== commentId)
+        };
+      }
+      return card;
+    });
+    
+    const updatedData = {
+      ...retroData,
+      cards: updatedCards
+    };
+    
+    saveRetroData(updatedData);
+    
+    toast({
+      title: "Comment deleted",
+      description: "Your comment has been removed",
     });
   };
 
@@ -434,7 +517,10 @@ const RetroSession: React.FC = () => {
                         onVote={handleVoteCard}
                         onAddComment={handleAddComment}
                         onCreateAction={handleCreateActionFromCard}
+                        onEditComment={handleEditComment}
+                        onDeleteComment={handleDeleteComment}
                         hasVoted={votedCards.has(card.id)}
+                        currentUser={currentUser}
                       />
                     ))
                   )}
@@ -457,7 +543,10 @@ const RetroSession: React.FC = () => {
                         onVote={handleVoteCard}
                         onAddComment={handleAddComment}
                         onCreateAction={handleCreateActionFromCard}
+                        onEditComment={handleEditComment}
+                        onDeleteComment={handleDeleteComment}
                         hasVoted={votedCards.has(card.id)}
+                        currentUser={currentUser}
                       />
                     ))
                   )}
@@ -480,7 +569,10 @@ const RetroSession: React.FC = () => {
                         onVote={handleVoteCard}
                         onAddComment={handleAddComment}
                         onCreateAction={handleCreateActionFromCard}
+                        onEditComment={handleEditComment}
+                        onDeleteComment={handleDeleteComment}
                         hasVoted={votedCards.has(card.id)}
+                        currentUser={currentUser}
                       />
                     ))
                   )}
@@ -505,7 +597,10 @@ const RetroSession: React.FC = () => {
                         onVote={handleVoteCard}
                         onAddComment={handleAddComment}
                         onCreateAction={handleCreateActionFromCard}
+                        onEditComment={handleEditComment}
+                        onDeleteComment={handleDeleteComment}
                         hasVoted={votedCards.has(card.id)}
+                        currentUser={currentUser}
                       />
                     ))
                   )}
@@ -530,7 +625,10 @@ const RetroSession: React.FC = () => {
                         onVote={handleVoteCard}
                         onAddComment={handleAddComment}
                         onCreateAction={handleCreateActionFromCard}
+                        onEditComment={handleEditComment}
+                        onDeleteComment={handleDeleteComment}
                         hasVoted={votedCards.has(card.id)}
+                        currentUser={currentUser}
                       />
                     ))
                   )}
@@ -555,7 +653,10 @@ const RetroSession: React.FC = () => {
                         onVote={handleVoteCard}
                         onAddComment={handleAddComment}
                         onCreateAction={handleCreateActionFromCard}
+                        onEditComment={handleEditComment}
+                        onDeleteComment={handleDeleteComment}
                         hasVoted={votedCards.has(card.id)}
+                        currentUser={currentUser}
                       />
                     ))
                   )}
