@@ -75,7 +75,7 @@ const NewActionItemForm: React.FC<NewActionItemFormProps> = ({ onAdd, cards = []
                 <SelectValue placeholder="Link to card (optional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No linked card</SelectItem>
+                <SelectItem value="no-link">No linked card</SelectItem>
                 {cards.map((card) => (
                   <SelectItem key={card.id} value={card.id}>
                     {card.content.substring(0, 30)}{card.content.length > 30 ? '...' : ''}
