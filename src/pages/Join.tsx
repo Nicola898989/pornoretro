@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface RetroInfo {
   id: string;
@@ -19,42 +20,19 @@ interface RetroInfo {
 const Join: React.FC = () => {
   const [retroId, setRetroId] = useState('');
   const [yourName, setYourName] = useState('');
-  const [recentRetros, setRecentRetros] = useState<RetroInfo[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Get recent retrospectives from localStorage
-    const getRecentRetros = () => {
-      const retros: RetroInfo[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('retro_')) {
-          try {
-            const retroData = JSON.parse(localStorage.getItem(key) || '');
-            retros.push({
-              id: retroData.id,
-              name: retroData.name,
-              team: retroData.team,
-              createdAt: retroData.createdAt
-            });
-          } catch (e) {
-            console.error("Error parsing retro data", e);
-          }
-        }
-      }
-      
-      // Sort by creation date, newest first
-      return retros.sort((a, b) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-    };
-    
-    // We don't want to show the list of retrospectives
-    // setRecentRetros(getRecentRetros());
+    // Check if there's a stored user name and pre-fill
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      setYourName(storedUser);
+    }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!retroId.trim() || !yourName.trim()) {
@@ -66,32 +44,83 @@ const Join: React.FC = () => {
       return;
     }
     
-    // Check if the retrospective exists
-    // This is the problematic part we need to fix
-    const providedId = retroId.trim();
+    setIsLoading(true);
     
-    // The key should be in the format 'retro_ID'
-    const retroKey = `retro_${providedId}`;
-    const retroData = localStorage.getItem(retroKey);
-    
-    if (!retroData) {
+    try {
+      // First check localStorage for backward compatibility
+      const providedId = retroId.trim();
+      const retroKey = `retro_${providedId}`;
+      const localRetroData = localStorage.getItem(retroKey);
+      
+      if (localRetroData) {
+        // Local retro exists, use it
+        localStorage.setItem("currentUser", yourName.trim());
+        
+        toast({
+          title: "Joined successfully!",
+          description: "Welcome to the retrospective",
+        });
+        
+        navigate(`/retro/${providedId}`);
+        return;
+      }
+      
+      // If no local retro, check Supabase
+      console.log("Searching for retro with ID:", providedId);
+      const { data: retroData, error } = await supabase
+        .from('retrospectives')
+        .select('*')
+        .eq('id', providedId)
+        .single();
+      
+      if (error) {
+        console.error("Supabase error:", error);
+        if (error.code === 'PGRST116') {
+          toast({
+            title: "Retrospective not found",
+            description: "Please check the ID and try again",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error finding retrospective",
+            description: "An unexpected error occurred",
+            variant: "destructive",
+          });
+        }
+        setIsLoading(false);
+        return;
+      }
+      
+      if (!retroData) {
+        toast({
+          title: "Retrospective not found",
+          description: "Please check the ID and try again",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      // Store the current user name in localStorage
+      localStorage.setItem("currentUser", yourName.trim());
+      
       toast({
-        title: "Retrospective not found",
-        description: "Please check the ID and try again",
+        title: "Joined successfully!",
+        description: "Welcome to the retrospective",
+      });
+      
+      navigate(`/retro/${providedId}`);
+    } catch (error) {
+      console.error("Failed to join retrospective:", error);
+      toast({
+        title: "Error joining retrospective",
+        description: "Please try again later",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setIsLoading(false);
     }
-    
-    // Store the current user name in localStorage
-    localStorage.setItem("currentUser", yourName.trim());
-    
-    toast({
-      title: "Joined successfully!",
-      description: "Welcome to the retrospective",
-    });
-    
-    navigate(`/retro/${providedId}`);
   };
 
   return (
@@ -137,8 +166,9 @@ const Join: React.FC = () => {
                 <Button 
                   type="submit" 
                   className="w-full bg-pornoretro-orange text-pornoretro-black hover:bg-pornoretro-darkorange"
+                  disabled={isLoading}
                 >
-                  Join Retrospective
+                  {isLoading ? 'Joining...' : 'Join Retrospective'}
                 </Button>
               </CardFooter>
             </form>
