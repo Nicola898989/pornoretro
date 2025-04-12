@@ -66,7 +66,9 @@ const Join: React.FC = () => {
     }
     
     // Check if the retrospective exists
-    const retroKey = `retro_${retroId.trim()}`;
+    // Fix: Use the exact ID as provided and also check for ID-only matches
+    const providedId = retroId.trim();
+    const retroKey = `retro_${providedId}`;
     const retroData = localStorage.getItem(retroKey);
     
     if (!retroData) {
@@ -87,7 +89,7 @@ const Join: React.FC = () => {
       description: "Welcome to the retrospective",
     });
     
-    navigate(`/retro/${retroId.trim()}`);
+    navigate(`/retro/${providedId}`);
   };
 
   const handleJoinRecent = (id: string) => {
@@ -119,7 +121,7 @@ const Join: React.FC = () => {
       
       <main className="flex-grow container mx-auto py-8 px-4">
         <div className="max-w-md mx-auto">
-          <Card className="border-pornoretro-orange/30 mb-8">
+          <Card className="border-pornoretro-orange/30">
             <form onSubmit={handleSubmit}>
               <CardHeader>
                 <CardTitle className="text-2xl text-pornoretro-orange">Join Retrospective</CardTitle>
@@ -143,7 +145,7 @@ const Join: React.FC = () => {
                   <Label htmlFor="retroId">Retrospective ID</Label>
                   <Input
                     id="retroId"
-                    placeholder="Enter the 8-character ID"
+                    placeholder="Enter the retrospective ID"
                     value={retroId}
                     onChange={(e) => setRetroId(e.target.value)}
                     className="bg-secondary text-pornoretro-gray"
@@ -162,36 +164,6 @@ const Join: React.FC = () => {
               </CardFooter>
             </form>
           </Card>
-          
-          {recentRetros.length > 0 && (
-            <Card className="border-pornoretro-orange/30">
-              <CardHeader>
-                <CardTitle className="text-xl text-pornoretro-orange">Recent Retrospectives</CardTitle>
-                <CardDescription>Quick access to recent sessions</CardDescription>
-              </CardHeader>
-              
-              <CardContent>
-                <div className="space-y-3">
-                  {recentRetros.map(retro => (
-                    <div key={retro.id} className="flex justify-between items-center p-3 bg-secondary rounded-lg">
-                      <div>
-                        <h4 className="font-medium">{retro.name}</h4>
-                        <p className="text-sm text-muted-foreground">{retro.team} • {formatDate(retro.createdAt)}</p>
-                      </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="border-pornoretro-orange text-pornoretro-orange hover:bg-pornoretro-orange hover:text-pornoretro-black"
-                        onClick={() => handleJoinRecent(retro.id)}
-                      >
-                        Join
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </main>
       

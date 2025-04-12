@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -11,7 +10,7 @@ import RetroReport from '@/components/RetroReport';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Share2, Copy, Users, Link2, FileText } from 'lucide-react';
+import { Share2, Copy, Users, Link2, FileText, Hash } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { 
   Dialog,
@@ -23,6 +22,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 
 interface RetroCard {
   id: string;
@@ -61,12 +61,10 @@ const RetroSession: React.FC = () => {
   const [retroUrl, setRetroUrl] = useState('');
 
   useEffect(() => {
-    // Set retro URL
     if (id) {
       setRetroUrl(`${window.location.origin}/retro/${id}`);
     }
     
-    // Get retro data
     if (id) {
       const retroKey = `retro_${id}`;
       const storedRetro = localStorage.getItem(retroKey);
@@ -84,7 +82,6 @@ const RetroSession: React.FC = () => {
       try {
         const data = JSON.parse(storedRetro) as RetroData;
         
-        // Initialize comments array if it doesn't exist
         if (!data.cards.some(card => 'comments' in card)) {
           data.cards = data.cards.map(card => ({
             ...card,
@@ -95,15 +92,12 @@ const RetroSession: React.FC = () => {
         
         setRetroData(data);
         
-        // Check if user is logged in
         const storedUser = localStorage.getItem('currentUser');
         if (!storedUser) {
-          // No user found, show join dialog
           setJoinDialogOpen(true);
         } else {
           setCurrentUser(storedUser);
           
-          // Get voted cards for this user
           const userVotes = new Set<string>();
           data.cards.forEach(card => {
             if (card.voterIds && card.voterIds.includes(storedUser)) {
@@ -177,25 +171,20 @@ const RetroSession: React.FC = () => {
   const handleVoteCard = (cardId: string) => {
     if (!retroData) return;
     
-    // Find if user already voted for this card
     const cardIndex = retroData.cards.findIndex(card => card.id === cardId);
     if (cardIndex === -1) return;
     
     const card = retroData.cards[cardIndex];
     const userVoted = card.voterIds && card.voterIds.includes(currentUser);
     
-    // If user already voted, remove the vote
-    // If user hasn't voted, add a vote
     const updatedCards = [...retroData.cards];
     if (userVoted) {
-      // Remove vote
       updatedCards[cardIndex] = {
         ...card,
         votes: Math.max(0, card.votes - 1),
         voterIds: card.voterIds.filter(id => id !== currentUser)
       };
       
-      // Remove from voted set
       const updatedVotes = new Set(votedCards);
       updatedVotes.delete(cardId);
       setVotedCards(updatedVotes);
@@ -205,14 +194,12 @@ const RetroSession: React.FC = () => {
         description: "Your vote has been removed from this card",
       });
     } else {
-      // Add vote
       updatedCards[cardIndex] = {
         ...card,
         votes: card.votes + 1,
         voterIds: [...(card.voterIds || []), currentUser]
       };
       
-      // Add to voted set
       const updatedVotes = new Set(votedCards);
       updatedVotes.add(cardId);
       setVotedCards(updatedVotes);
@@ -294,7 +281,7 @@ const RetroSession: React.FC = () => {
       description: "Your comment has been updated",
     });
   };
-  
+
   const handleDeleteComment = (cardId: string, commentId: string) => {
     if (!retroData) return;
     
@@ -432,18 +419,15 @@ const RetroSession: React.FC = () => {
     );
   }
 
-  // Separate cards by type
   const hotCards = retroData.cards.filter(card => card.type === 'hot');
   const disappointmentCards = retroData.cards.filter(card => card.type === 'disappointment');
   const fantasyCards = retroData.cards.filter(card => card.type === 'fantasy');
 
-  // Sort cards by votes (descending)
   const sortByVotes = (a: RetroCard, b: RetroCard) => b.votes - a.votes;
   hotCards.sort(sortByVotes);
   disappointmentCards.sort(sortByVotes);
   fantasyCards.sort(sortByVotes);
 
-  // Simplified card data for the action item form
   const cardOptions = retroData.cards.map(card => ({
     id: card.id,
     content: card.content,
@@ -462,6 +446,12 @@ const RetroSession: React.FC = () => {
               <div className="flex items-center text-muted-foreground">
                 <Users className="w-4 h-4 mr-1" />
                 <span>{retroData.team}</span>
+              </div>
+              <div className="flex items-center">
+                <Hash className="w-4 h-4 mr-1 text-muted-foreground" />
+                <Badge variant="outline" className="bg-secondary/50 border-pornoretro-orange/20">
+                  ID: {retroData.id}
+                </Badge>
               </div>
               <div className="text-muted-foreground text-sm">
                 {retroData.isAnonymous ? 
@@ -698,7 +688,6 @@ const RetroSession: React.FC = () => {
       
       <Footer />
 
-      {/* Join Dialog */}
       <Dialog open={joinDialogOpen} onOpenChange={setJoinDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -730,7 +719,6 @@ const RetroSession: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Share Dialog */}
       <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -762,10 +750,13 @@ const RetroSession: React.FC = () => {
             <Link2 className="h-4 w-4 text-muted-foreground" />
             <p className="text-muted-foreground">Anyone with the link can join this retro session</p>
           </div>
+          <div className="mt-2 p-2 bg-secondary/30 rounded flex items-center">
+            <Hash className="h-4 w-4 text-muted-foreground mr-2" />
+            <p className="text-muted-foreground">Retrospective ID: {retroData.id}</p>
+          </div>
         </DialogContent>
       </Dialog>
 
-      {/* Create Action From Card Dialog */}
       <Dialog open={createActionDialogOpen} onOpenChange={setCreateActionDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
