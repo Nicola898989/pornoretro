@@ -65,7 +65,7 @@ const Join: React.FC = () => {
         return;
       }
       
-      // If no local retro, check Supabase using raw SQL query instead of typed query
+      // If no local retro, check Supabase
       console.log("Searching for retro with ID:", providedId);
       
       const { data: retroData, error } = await supabase

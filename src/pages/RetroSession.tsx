@@ -23,6 +23,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface RetroCard {
   id: string;
@@ -53,6 +55,7 @@ const RetroSession: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<string>('');
   const [votedCards, setVotedCards] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [createActionDialogOpen, setCreateActionDialogOpen] = useState(false);
@@ -65,60 +68,130 @@ const RetroSession: React.FC = () => {
       setRetroUrl(`${window.location.origin}/retro/${id}`);
     }
     
-    if (id) {
+    const loadRetro = async () => {
+      if (!id) {
+        setErrorDetails("No retrospective ID provided");
+        setLoading(false);
+        return;
+      }
+
       const retroKey = `retro_${id}`;
       const storedRetro = localStorage.getItem(retroKey);
       
+      console.log(`Checking localStorage for retro with key: ${retroKey}`);
+      console.log(`LocalStorage data found: ${storedRetro ? 'Yes' : 'No'}`);
+      
       if (!storedRetro) {
-        toast({
-          title: "Retrospective not found",
-          description: "The session you're looking for doesn't exist",
-          variant: "destructive",
-        });
-        navigate('/join');
-        return;
+        console.log(`Attempting to fetch retro with ID ${id} from Supabase`);
+        try {
+          const { data: retroData, error } = await supabase
+            .from('retrospectives')
+            .select('*')
+            .eq('id', id)
+            .maybeSingle();
+          
+          console.log("Supabase fetch result:", { retroData, error });
+          
+          if (error) {
+            console.error("Supabase query error:", error);
+            setErrorDetails(`Database error: ${error.message}`);
+            setLoading(false);
+            return;
+          }
+          
+          if (!retroData) {
+            console.error(`No retrospective found with ID: ${id}`);
+            setErrorDetails(`No retrospective found with ID: ${id}. Please check if the ID is correct.`);
+            setLoading(false);
+            return;
+          }
+          
+          const newLocalRetro: RetroData = {
+            id: retroData.id,
+            name: retroData.name,
+            team: retroData.team,
+            creator: retroData.created_by,
+            createdAt: retroData.created_at,
+            cards: [],
+            actions: [],
+            isAnonymous: false
+          };
+          
+          const { data: cardsData, error: cardsError } = await supabase
+            .from('retro_cards')
+            .select('*')
+            .eq('retro_id', id);
+            
+          console.log("Supabase cards data:", { cardsData, cardsError });
+          
+          if (!cardsError && cardsData) {
+            newLocalRetro.cards = cardsData.map(card => ({
+              id: card.id,
+              type: card.type as CardType,
+              content: card.content,
+              author: card.author,
+              votes: 0,
+              voterIds: [],
+              comments: []
+            }));
+          }
+          
+          localStorage.setItem(retroKey, JSON.stringify(newLocalRetro));
+          setRetroData(newLocalRetro);
+          
+          toast({
+            title: "Retrospective loaded from database",
+            description: "Successfully retrieved retrospective from Supabase",
+          });
+        } catch (error) {
+          console.error("Error fetching from Supabase:", error);
+          setErrorDetails(`Failed to find retrospective with ID: ${id}. Error details: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          setLoading(false);
+          return;
+        }
+      } else {
+        try {
+          const data = JSON.parse(storedRetro) as RetroData;
+          
+          if (!data.cards.some(card => 'comments' in card)) {
+            data.cards = data.cards.map(card => ({
+              ...card,
+              comments: []
+            }));
+            localStorage.setItem(retroKey, JSON.stringify(data));
+          }
+          
+          setRetroData(data);
+        } catch (e) {
+          console.error("Error parsing retro data", e);
+          setErrorDetails(`Error parsing retrospective data. Please try again or create a new retrospective.`);
+          setLoading(false);
+          return;
+        }
       }
       
-      try {
-        const data = JSON.parse(storedRetro) as RetroData;
+      const storedUser = localStorage.getItem('currentUser');
+      if (!storedUser) {
+        setJoinDialogOpen(true);
+      } else {
+        setCurrentUser(storedUser);
         
-        if (!data.cards.some(card => 'comments' in card)) {
-          data.cards = data.cards.map(card => ({
-            ...card,
-            comments: []
-          }));
-          localStorage.setItem(retroKey, JSON.stringify(data));
-        }
-        
-        setRetroData(data);
-        
-        const storedUser = localStorage.getItem('currentUser');
-        if (!storedUser) {
-          setJoinDialogOpen(true);
-        } else {
-          setCurrentUser(storedUser);
-          
+        if (retroData) {
           const userVotes = new Set<string>();
-          data.cards.forEach(card => {
+          retroData.cards.forEach(card => {
             if (card.voterIds && card.voterIds.includes(storedUser)) {
               userVotes.add(card.id);
             }
           });
           setVotedCards(userVotes);
         }
-      } catch (e) {
-        console.error("Error parsing retro data", e);
-        toast({
-          title: "Error loading retrospective",
-          description: "There was a problem loading the data",
-          variant: "destructive",
-        });
-        navigate('/');
       }
-    }
+      
+      setLoading(false);
+    };
     
-    setLoading(false);
-  }, [id, navigate, toast]);
+    loadRetro();
+  }, [id, toast, retroData]);
 
   const handleJoinRetro = (e: React.FormEvent) => {
     e.preventDefault();
@@ -400,7 +473,52 @@ const RetroSession: React.FC = () => {
       <div className="flex flex-col min-h-screen bg-pornoretro-black">
         <Header />
         <main className="flex-grow flex items-center justify-center">
-          <div className="text-2xl">Loading...</div>
+          <div className="text-2xl">Loading retrospective...</div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (errorDetails) {
+    return (
+      <div className="flex flex-col min-h-screen bg-pornoretro-black">
+        <Header />
+        <main className="flex-grow container mx-auto py-8 px-4">
+          <div className="max-w-lg mx-auto space-y-6">
+            <Alert variant="destructive" className="bg-red-900/20 border-red-500/50">
+              <AlertTitle className="text-2xl mb-2 text-red-400">Retrospective not found</AlertTitle>
+              <AlertDescription className="text-lg">
+                The session you're looking for doesn't exist
+              </AlertDescription>
+            </Alert>
+            
+            <div className="bg-pornoretro-black/30 p-4 rounded-md border border-gray-700">
+              <h3 className="font-semibold mb-2 text-pornoretro-orange">Debug Information</h3>
+              <p className="text-sm mb-4">{errorDetails}</p>
+              
+              <div className="mt-4 space-y-2">
+                <h4 className="text-sm font-medium text-gray-400">Requested ID</h4>
+                <code className="bg-gray-800 px-2 py-1 rounded text-gray-300 block">{id}</code>
+              </div>
+            </div>
+            
+            <div className="flex gap-4 justify-center">
+              <Button 
+                onClick={() => navigate('/join')}
+                variant="outline"
+                className="border-pornoretro-orange text-pornoretro-orange"
+              >
+                Join Another Retrospective
+              </Button>
+              <Button 
+                onClick={() => navigate('/new-retro')}
+                className="bg-pornoretro-orange text-pornoretro-black hover:bg-pornoretro-darkorange"
+              >
+                Create New Retrospective
+              </Button>
+            </div>
+          </div>
         </main>
         <Footer />
       </div>
