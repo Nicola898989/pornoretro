@@ -9,7 +9,65 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      retro_cards: {
+        Row: {
+          author: string
+          content: string
+          created_at: string
+          id: string
+          retro_id: string
+          type: string
+        }
+        Insert: {
+          author: string
+          content: string
+          created_at?: string
+          id?: string
+          retro_id: string
+          type: string
+        }
+        Update: {
+          author?: string
+          content?: string
+          created_at?: string
+          id?: string
+          retro_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retro_cards_retro_id_fkey"
+            columns: ["retro_id"]
+            isOneToOne: false
+            referencedRelation: "retrospectives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      retrospectives: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          team: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id: string
+          name: string
+          team: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          team?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -65,29 +65,24 @@ const Join: React.FC = () => {
         return;
       }
       
-      // If no local retro, check Supabase
+      // If no local retro, check Supabase using raw SQL query instead of typed query
       console.log("Searching for retro with ID:", providedId);
+      
       const { data: retroData, error } = await supabase
         .from('retrospectives')
         .select('*')
         .eq('id', providedId)
-        .single();
+        .maybeSingle();
+      
+      console.log("Query response:", retroData, error);
       
       if (error) {
         console.error("Supabase error:", error);
-        if (error.code === 'PGRST116') {
-          toast({
-            title: "Retrospective not found",
-            description: "Please check the ID and try again",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Error finding retrospective",
-            description: "An unexpected error occurred",
-            variant: "destructive",
-          });
-        }
+        toast({
+          title: "Error finding retrospective",
+          description: error.message || "An unexpected error occurred",
+          variant: "destructive",
+        });
         setIsLoading(false);
         return;
       }
