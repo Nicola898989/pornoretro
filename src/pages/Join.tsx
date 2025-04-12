@@ -50,7 +50,8 @@ const Join: React.FC = () => {
       );
     };
     
-    setRecentRetros(getRecentRetros());
+    // We don't want to show the list of retrospectives
+    // setRecentRetros(getRecentRetros());
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -66,8 +67,10 @@ const Join: React.FC = () => {
     }
     
     // Check if the retrospective exists
-    // Fix: Use the exact ID as provided and also check for ID-only matches
+    // This is the problematic part we need to fix
     const providedId = retroId.trim();
+    
+    // The key should be in the format 'retro_ID'
     const retroKey = `retro_${providedId}`;
     const retroData = localStorage.getItem(retroKey);
     
@@ -80,8 +83,7 @@ const Join: React.FC = () => {
       return;
     }
     
-    // In a real app, we'd register the participant
-    // For now, we'll just navigate to the retro page
+    // Store the current user name in localStorage
     localStorage.setItem("currentUser", yourName.trim());
     
     toast({
@@ -90,29 +92,6 @@ const Join: React.FC = () => {
     });
     
     navigate(`/retro/${providedId}`);
-  };
-
-  const handleJoinRecent = (id: string) => {
-    if (!yourName.trim()) {
-      toast({
-        title: "Name required",
-        description: "Please enter your name first",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    localStorage.setItem("currentUser", yourName.trim());
-    navigate(`/retro/${id}`);
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    }).format(date);
   };
 
   return (
