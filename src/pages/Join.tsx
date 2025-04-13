@@ -37,8 +37,8 @@ const Join: React.FC = () => {
     
     if (!retroId.trim() || !yourName.trim()) {
       toast({
-        title: "Incomplete form",
-        description: "Please fill in all the required fields",
+        title: "Modulo incompleto",
+        description: "Per favore, inserisci tutti i campi richiesti",
         variant: "destructive",
       });
       return;
@@ -57,8 +57,8 @@ const Join: React.FC = () => {
         localStorage.setItem("currentUser", yourName.trim());
         
         toast({
-          title: "Joined successfully!",
-          description: "Welcome to the retrospective",
+          title: "Entrato con successo!",
+          description: "Benvenuto nella retrospettiva",
         });
         
         navigate(`/retro/${providedId}`);
@@ -66,7 +66,7 @@ const Join: React.FC = () => {
       }
       
       // If no local retro, check Supabase
-      console.log("Searching for retro with ID:", providedId);
+      console.log("Cerco la retrospettiva con ID:", providedId);
       
       const { data: retroData, error } = await supabase
         .from('retrospectives')
@@ -74,13 +74,13 @@ const Join: React.FC = () => {
         .eq('id', providedId)
         .maybeSingle();
       
-      console.log("Query response:", retroData, error);
+      console.log("Risposta dalla query:", retroData, error);
       
       if (error) {
-        console.error("Supabase error:", error);
+        console.error("Errore Supabase:", error);
         toast({
-          title: "Error finding retrospective",
-          description: error.message || "An unexpected error occurred",
+          title: "Errore nel trovare la retrospettiva",
+          description: error.message || "Si è verificato un errore imprevisto",
           variant: "destructive",
         });
         setIsLoading(false);
@@ -89,8 +89,8 @@ const Join: React.FC = () => {
       
       if (!retroData) {
         toast({
-          title: "Retrospective not found",
-          description: "Please check the ID and try again",
+          title: "Retrospettiva non trovata",
+          description: "Controlla l'ID e riprova",
           variant: "destructive",
         });
         setIsLoading(false);
@@ -100,17 +100,32 @@ const Join: React.FC = () => {
       // Store the current user name in localStorage
       localStorage.setItem("currentUser", yourName.trim());
       
+      // Create local storage entry for the retro to ensure compatibility
+      const localRetro = {
+        id: retroData.id,
+        name: retroData.name,
+        team: retroData.team,
+        creator: retroData.created_by,
+        createdAt: retroData.created_at,
+        cards: [],
+        actions: [],
+        isAnonymous: false
+      };
+      
+      // Save to localStorage for compatibility with existing code
+      localStorage.setItem(retroKey, JSON.stringify(localRetro));
+      
       toast({
-        title: "Joined successfully!",
-        description: "Welcome to the retrospective",
+        title: "Entrato con successo!",
+        description: "Benvenuto nella retrospettiva",
       });
       
       navigate(`/retro/${providedId}`);
     } catch (error) {
-      console.error("Failed to join retrospective:", error);
+      console.error("Impossibile accedere alla retrospettiva:", error);
       toast({
-        title: "Error joining retrospective",
-        description: "Please try again later",
+        title: "Errore nell'accesso alla retrospettiva",
+        description: "Riprova più tardi",
         variant: "destructive",
       });
     } finally {
@@ -127,16 +142,16 @@ const Join: React.FC = () => {
           <Card className="border-pornoretro-orange/30">
             <form onSubmit={handleSubmit}>
               <CardHeader>
-                <CardTitle className="text-2xl text-pornoretro-orange">Join Retrospective</CardTitle>
-                <CardDescription>Enter a retrospective ID to join an existing session</CardDescription>
+                <CardTitle className="text-2xl text-pornoretro-orange">Entra nella Retrospettiva</CardTitle>
+                <CardDescription>Inserisci l'ID di una retrospettiva esistente per partecipare</CardDescription>
               </CardHeader>
               
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="yourName">Your Name</Label>
+                  <Label htmlFor="yourName">Il tuo nome</Label>
                   <Input
                     id="yourName"
-                    placeholder="e.g. John Developer"
+                    placeholder="es. Mario Sviluppatore"
                     value={yourName}
                     onChange={(e) => setYourName(e.target.value)}
                     className="bg-secondary text-pornoretro-gray"
@@ -145,10 +160,10 @@ const Join: React.FC = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="retroId">Retrospective ID</Label>
+                  <Label htmlFor="retroId">ID Retrospettiva</Label>
                   <Input
                     id="retroId"
-                    placeholder="Enter the retrospective ID"
+                    placeholder="Inserisci l'ID della retrospettiva"
                     value={retroId}
                     onChange={(e) => setRetroId(e.target.value)}
                     className="bg-secondary text-pornoretro-gray"
@@ -163,7 +178,7 @@ const Join: React.FC = () => {
                   className="w-full bg-pornoretro-orange text-pornoretro-black hover:bg-pornoretro-darkorange"
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Joining...' : 'Join Retrospective'}
+                  {isLoading ? 'Entrando...' : 'Entra nella Retrospettiva'}
                 </Button>
               </CardFooter>
             </form>
