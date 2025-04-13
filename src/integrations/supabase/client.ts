@@ -112,17 +112,17 @@ interface CustomDatabase extends Database {
         };
         Relationships: [
           {
-            foreignKeyName: "retro_actions_retro_id_fkey";
-            columns: ["retro_id"];
-            isOneToOne: false;
-            referencedRelation: "retrospectives";
-            referencedColumns: ["id"];
-          },
-          {
             foreignKeyName: "retro_actions_linked_card_id_fkey";
             columns: ["linked_card_id"];
             isOneToOne: false;
             referencedRelation: "retro_cards";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "retro_actions_retro_id_fkey";
+            columns: ["retro_id"];
+            isOneToOne: false;
+            referencedRelation: "retrospectives";
             referencedColumns: ["id"];
           }
         ];
