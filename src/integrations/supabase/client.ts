@@ -34,6 +34,15 @@ interface CustomDatabase extends Database {
           user_id?: string;
           created_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "retro_card_votes_card_id_fkey";
+            columns: ["card_id"];
+            isOneToOne: false;
+            referencedRelation: "retro_cards";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       retro_comments: {
         Row: {
@@ -57,6 +66,15 @@ interface CustomDatabase extends Database {
           content?: string;
           created_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "retro_comments_card_id_fkey";
+            columns: ["card_id"];
+            isOneToOne: false;
+            referencedRelation: "retro_cards";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       retro_actions: {
         Row: {
@@ -92,6 +110,22 @@ interface CustomDatabase extends Database {
           linked_card_type?: string | null;
           created_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "retro_actions_retro_id_fkey";
+            columns: ["retro_id"];
+            isOneToOne: false;
+            referencedRelation: "retrospectives";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "retro_actions_linked_card_id_fkey";
+            columns: ["linked_card_id"];
+            isOneToOne: false;
+            referencedRelation: "retro_cards";
+            referencedColumns: ["id"];
+          }
+        ];
       };
     };
     Views: Database['public']['Views'];
