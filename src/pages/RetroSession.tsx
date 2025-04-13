@@ -86,25 +86,29 @@ const RetroSession: React.FC = () => {
       }
 
       try {
-        const { data: retroData, error: retroError } = await supabase
+        // First try to get the retrospective data using select (multiple rows query)
+        const { data: retroDataArray, error: retroSelectError } = await supabase
           .from('retrospectives')
           .select('*')
-          .eq('id', id)
-          .single();
+          .eq('id', id);
           
-        if (retroError) {
-          console.error("Supabase query error:", retroError);
-          setErrorDetails(`Database error: ${retroError.message}`);
+        if (retroSelectError) {
+          console.error("Supabase query error:", retroSelectError);
+          setErrorDetails(`Database error: ${retroSelectError.message}`);
           setLoading(false);
           return;
         }
         
-        if (!retroData) {
+        // Check if any data was returned
+        if (!retroDataArray || retroDataArray.length === 0) {
           console.error(`No retrospective found with ID: ${id}`);
           setErrorDetails(`No retrospective found with ID: ${id}. Please check if the ID is correct.`);
           setLoading(false);
           return;
         }
+        
+        // Use the first item in the array
+        const retroData = retroDataArray[0];
         
         setRetroData({
           id: retroData.id,
