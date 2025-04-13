@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { ThumbsUp, MessageCircle, PlusCircle, Pencil, Trash, Check, X } from 'lucide-react';
+import { ThumbsUp, MessageCircle, PlusCircle, Pencil, Trash, Check, X, Move, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,8 +34,11 @@ interface RetroCardProps {
   onCreateAction: (cardId: string) => void;
   onEditComment?: (cardId: string, commentId: string, newContent: string) => void;
   onDeleteComment?: (cardId: string, commentId: string) => void;
+  onDrop?: (cardId: string, targetCardId: string) => void;
+  onRemoveFromGroup?: () => void;
   hasVoted: boolean;
   currentUser?: string;
+  inGroup?: boolean;
 }
 
 const cardStyles = {
@@ -62,13 +65,17 @@ const RetroCard: React.FC<RetroCardProps> = ({
   onCreateAction,
   onEditComment,
   onDeleteComment,
+  onDrop,
+  onRemoveFromGroup,
   hasVoted,
-  currentUser = '' 
+  currentUser = '',
+  inGroup = false 
 }) => {
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [editingComment, setEditingComment] = useState<string | null>(null);
   const [editedContent, setEditedContent] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
   
   const handleSubmitComment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,13 +108,63 @@ const RetroCard: React.FC<RetroCardProps> = ({
       onDeleteComment(id, commentId);
     }
   };
+
+  // Drag and drop handling
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('text/plain', id);
+    e.dataTransfer.effectAllowed = 'move';
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const draggedCardId = e.dataTransfer.getData('text/plain');
+    
+    if (draggedCardId && draggedCardId !== id && onDrop) {
+      onDrop(draggedCardId, id);
+    }
+  };
   
   return (
-    <Card className={cn("border-2", cardStyles[type])}>
+    <Card 
+      className={cn(
+        "border-2 transition-all", 
+        cardStyles[type],
+        isDragging ? "opacity-60 scale-95" : "",
+        inGroup ? "border-opacity-70" : ""
+      )}
+      draggable={!inGroup}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       <CardHeader>
-        <CardTitle className="text-lg font-bold">
-          {cardTitles[type]}
-        </CardTitle>
+        <div className="flex justify-between items-start">
+          <CardTitle className="text-lg font-bold">
+            {cardTitles[type]}
+          </CardTitle>
+          {inGroup && onRemoveFromGroup && (
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              className="h-6 w-6 p-0 text-muted-foreground hover:text-white"
+              onClick={onRemoveFromGroup}
+              title="Remove from group"
+            >
+              <LogOut className="w-3 h-3" />
+            </Button>
+          )}
+        </div>
         <CardDescription>
           Posted by {author}
         </CardDescription>

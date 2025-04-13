@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -25,6 +26,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import RetroCardGroup from '@/components/RetroCardGroup';
 
 interface RetroCard {
   id: string;
@@ -34,6 +36,7 @@ interface RetroCard {
   votes: number;
   voterIds: string[];
   comments: Comment[];
+  groupId?: string;
 }
 
 interface RetroData {
@@ -45,6 +48,12 @@ interface RetroData {
   isAnonymous: boolean;
 }
 
+interface CardGroup {
+  id: string;
+  title: string;
+  cards: RetroCard[];
+}
+
 const RetroSession: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -52,6 +61,7 @@ const RetroSession: React.FC = () => {
   const [retroData, setRetroData] = useState<RetroData | null>(null);
   const [cards, setCards] = useState<RetroCard[]>([]);
   const [actions, setActions] = useState<ActionItemType[]>([]);
+  const [cardGroups, setCardGroups] = useState<CardGroup[]>([]);
   const [currentUser, setCurrentUser] = useState<string>('');
   const [votedCards, setVotedCards] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -108,6 +118,8 @@ const RetroSession: React.FC = () => {
         await fetchCards();
         
         await fetchActions();
+        
+        await fetchCardGroups();
 
         setupRealtimeSubscription();
         
@@ -140,7 +152,7 @@ const RetroSession: React.FC = () => {
       .on('postgres_changes', 
           { event: '*', schema: 'public', table: 'retro_cards', filter: `retro_id=eq.${id}` },
           async (payload) => {
-            console.log('Realtime change detected:', payload);
+            console.log('Realtime card change detected:', payload);
             await fetchCards();
           }
       )
@@ -149,6 +161,31 @@ const RetroSession: React.FC = () => {
           async (payload) => {
             console.log('Realtime action change detected:', payload);
             await fetchActions();
+          }
+      )
+      .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'retro_card_votes' },
+          async (payload) => {
+            console.log('Realtime vote change detected:', payload);
+            await fetchCards();
+            if (currentUser) {
+              await fetchUserVotes(currentUser);
+            }
+          }
+      )
+      .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'retro_comments' },
+          async (payload) => {
+            console.log('Realtime comment change detected:', payload);
+            await fetchCards();
+          }
+      )
+      .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'retro_card_groups' },
+          async (payload) => {
+            console.log('Realtime card group change detected:', payload);
+            await fetchCardGroups();
+            await fetchCards();
           }
       )
       .subscribe();
@@ -197,7 +234,8 @@ const RetroSession: React.FC = () => {
             author: card.author,
             votes: votes,
             voterIds: voterIds,
-            comments: comments
+            comments: comments,
+            groupId: card.group_id
           };
         }));
         
@@ -210,6 +248,32 @@ const RetroSession: React.FC = () => {
         description: "Failed to fetch retrospective cards",
         variant: "destructive",
       });
+    }
+  };
+
+  const fetchCardGroups = async () => {
+    if (!id) return;
+    
+    try {
+      const { data: groupsData, error: groupsError } = await supabase
+        .from('retro_card_groups')
+        .select('*')
+        .eq('retro_id', id);
+        
+      if (groupsError) {
+        throw groupsError;
+      }
+      
+      if (groupsData) {
+        const groups = groupsData.map(group => ({
+          id: group.id,
+          title: group.title,
+          cards: []
+        }));
+        setCardGroups(groups);
+      }
+    } catch (error) {
+      console.error("Error fetching card groups:", error);
     }
   };
 
@@ -375,8 +439,6 @@ const RetroSession: React.FC = () => {
           description: "Your vote has been added to this card",
         });
       }
-      
-      await fetchCards();
     } catch (error) {
       console.error("Error updating vote:", error);
       toast({
@@ -408,8 +470,6 @@ const RetroSession: React.FC = () => {
         title: "Comment added",
         description: "Your comment has been added to the card",
       });
-      
-      await fetchCards();
     } catch (error) {
       console.error("Error adding comment:", error);
       toast({
@@ -433,8 +493,6 @@ const RetroSession: React.FC = () => {
         title: "Comment updated",
         description: "Your comment has been updated",
       });
-      
-      await fetchCards();
     } catch (error) {
       console.error("Error updating comment:", error);
       toast({
@@ -458,8 +516,6 @@ const RetroSession: React.FC = () => {
         title: "Comment deleted",
         description: "Your comment has been removed",
       });
-      
-      await fetchCards();
     } catch (error) {
       console.error("Error deleting comment:", error);
       toast({
@@ -511,8 +567,6 @@ const RetroSession: React.FC = () => {
         setCreateActionDialogOpen(false);
         setSelectedCardForAction(null);
       }
-      
-      await fetchActions();
     } catch (error) {
       console.error("Error adding action item:", error);
       toast({
@@ -534,8 +588,6 @@ const RetroSession: React.FC = () => {
         .eq('id', actionId);
       
       if (error) throw error;
-      
-      await fetchActions();
     } catch (error) {
       console.error("Error updating action item:", error);
       toast({
@@ -554,8 +606,6 @@ const RetroSession: React.FC = () => {
         .eq('id', actionId);
       
       if (error) throw error;
-      
-      await fetchActions();
     } catch (error) {
       console.error("Error deleting action item:", error);
       toast({
@@ -569,6 +619,122 @@ const RetroSession: React.FC = () => {
   const handleCreateActionFromCard = (cardId: string) => {
     setSelectedCardForAction(cardId);
     setCreateActionDialogOpen(true);
+  };
+
+  const handleCreateGroup = async (cardId: string, targetCardId: string) => {
+    if (!retroData) return;
+    
+    const card = cards.find(c => c.id === cardId);
+    const targetCard = cards.find(c => c.id === targetCardId);
+    
+    if (!card || !targetCard) return;
+    
+    try {
+      // Se la carta target è già in un gruppo, aggiungi la carta a quel gruppo
+      if (targetCard.groupId) {
+        const { error } = await supabase
+          .from('retro_cards')
+          .update({ group_id: targetCard.groupId })
+          .eq('id', cardId);
+          
+        if (error) throw error;
+        
+        toast({
+          title: "Cards grouped",
+          description: "The card has been added to the existing group",
+        });
+      } 
+      // Se entrambe le carte non sono in un gruppo, crea un nuovo gruppo
+      else {
+        // Crea un nuovo gruppo
+        const newGroupId = uuidv4();
+        const groupTitle = `${card.type} Group`;
+        
+        const { error: groupError } = await supabase
+          .from('retro_card_groups')
+          .insert([{
+            id: newGroupId,
+            retro_id: retroData.id,
+            title: groupTitle,
+            created_at: new Date().toISOString()
+          }]);
+          
+        if (groupError) throw groupError;
+        
+        // Aggiungi entrambe le carte al nuovo gruppo
+        const { error: cardsError } = await supabase
+          .from('retro_cards')
+          .update({ group_id: newGroupId })
+          .in('id', [cardId, targetCardId]);
+          
+        if (cardsError) throw cardsError;
+        
+        toast({
+          title: "New group created",
+          description: "Cards have been grouped together",
+        });
+      }
+      
+      await fetchCards();
+      await fetchCardGroups();
+    } catch (error) {
+      console.error("Error grouping cards:", error);
+      toast({
+        title: "Error",
+        description: "Failed to group cards. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRemoveFromGroup = async (cardId: string) => {
+    try {
+      const { error } = await supabase
+        .from('retro_cards')
+        .update({ group_id: null })
+        .eq('id', cardId);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Card removed from group",
+        description: "The card has been removed from its group",
+      });
+      
+      await fetchCards();
+    } catch (error) {
+      console.error("Error removing card from group:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove card from group. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditGroupTitle = async (groupId: string, newTitle: string) => {
+    try {
+      const { error } = await supabase
+        .from('retro_card_groups')
+        .update({ title: newTitle })
+        .eq('id', groupId);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Group updated",
+        description: "The group title has been updated",
+      });
+      
+      await fetchCardGroups();
+    } catch (error) {
+      console.error("Error updating group title:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update group title. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const copyRetroLink = () => {
@@ -649,14 +815,24 @@ const RetroSession: React.FC = () => {
     );
   }
 
-  const hotCards = cards.filter(card => card.type === 'hot');
-  const disappointmentCards = cards.filter(card => card.type === 'disappointment');
-  const fantasyCards = cards.filter(card => card.type === 'fantasy');
+  // Prepare card data
+  const groupedCards = cards.filter(card => card.groupId);
+  const ungroupedCards = cards.filter(card => !card.groupId);
+  
+  const hotCards = ungroupedCards.filter(card => card.type === 'hot');
+  const disappointmentCards = ungroupedCards.filter(card => card.type === 'disappointment');
+  const fantasyCards = ungroupedCards.filter(card => card.type === 'fantasy');
 
   const sortByVotes = (a: RetroCard, b: RetroCard) => b.votes - a.votes;
   hotCards.sort(sortByVotes);
   disappointmentCards.sort(sortByVotes);
   fantasyCards.sort(sortByVotes);
+
+  // Prepare groups with their cards
+  const populatedGroups = cardGroups.map(group => ({
+    ...group,
+    cards: groupedCards.filter(card => card.groupId === group.id)
+  }));
 
   const cardOptions = cards.map(card => ({
     id: card.id,
@@ -717,9 +893,35 @@ const RetroSession: React.FC = () => {
                 <TabsTrigger value="hot">Hot Moments</TabsTrigger>
                 <TabsTrigger value="disappointments">Disappointments</TabsTrigger>
                 <TabsTrigger value="fantasies">Team Fantasies</TabsTrigger>
+                <TabsTrigger value="groups">Card Groups</TabsTrigger>
               </TabsList>
               
               <TabsContent value="all-cards" className="mt-6">
+                {populatedGroups.length > 0 && (
+                  <div className="mb-8">
+                    <h2 className="text-xl font-bold text-pornoretro-orange mb-4">Grouped Cards</h2>
+                    <div className="space-y-6">
+                      {populatedGroups.map(group => (
+                        <RetroCardGroup 
+                          key={group.id}
+                          id={group.id}
+                          title={group.title}
+                          cards={group.cards}
+                          onVote={handleVoteCard}
+                          onAddComment={handleAddComment}
+                          onCreateAction={handleCreateActionFromCard}
+                          onEditComment={handleEditComment}
+                          onDeleteComment={handleDeleteComment}
+                          onRemoveCard={handleRemoveFromGroup}
+                          onEditTitle={handleEditGroupTitle}
+                          votedCards={votedCards}
+                          currentUser={currentUser}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <h2 className="text-xl font-bold text-green-400 md:col-span-2">Hot moments 🔥</h2>
                   {hotCards.length === 0 ? (
@@ -739,6 +941,7 @@ const RetroSession: React.FC = () => {
                         onCreateAction={handleCreateActionFromCard}
                         onEditComment={handleEditComment}
                         onDeleteComment={handleDeleteComment}
+                        onDrop={handleCreateGroup}
                         hasVoted={votedCards.has(card.id)}
                         currentUser={currentUser}
                       />
@@ -765,6 +968,7 @@ const RetroSession: React.FC = () => {
                         onCreateAction={handleCreateActionFromCard}
                         onEditComment={handleEditComment}
                         onDeleteComment={handleDeleteComment}
+                        onDrop={handleCreateGroup}
                         hasVoted={votedCards.has(card.id)}
                         currentUser={currentUser}
                       />
@@ -791,6 +995,7 @@ const RetroSession: React.FC = () => {
                         onCreateAction={handleCreateActionFromCard}
                         onEditComment={handleEditComment}
                         onDeleteComment={handleDeleteComment}
+                        onDrop={handleCreateGroup}
                         hasVoted={votedCards.has(card.id)}
                         currentUser={currentUser}
                       />
@@ -819,6 +1024,7 @@ const RetroSession: React.FC = () => {
                         onCreateAction={handleCreateActionFromCard}
                         onEditComment={handleEditComment}
                         onDeleteComment={handleDeleteComment}
+                        onDrop={handleCreateGroup}
                         hasVoted={votedCards.has(card.id)}
                         currentUser={currentUser}
                       />
@@ -847,6 +1053,7 @@ const RetroSession: React.FC = () => {
                         onCreateAction={handleCreateActionFromCard}
                         onEditComment={handleEditComment}
                         onDeleteComment={handleDeleteComment}
+                        onDrop={handleCreateGroup}
                         hasVoted={votedCards.has(card.id)}
                         currentUser={currentUser}
                       />
@@ -875,12 +1082,44 @@ const RetroSession: React.FC = () => {
                         onCreateAction={handleCreateActionFromCard}
                         onEditComment={handleEditComment}
                         onDeleteComment={handleDeleteComment}
+                        onDrop={handleCreateGroup}
                         hasVoted={votedCards.has(card.id)}
                         currentUser={currentUser}
                       />
                     ))
                   )}
                 </div>
+              </TabsContent>
+              
+              <TabsContent value="groups" className="mt-6">
+                {populatedGroups.length === 0 ? (
+                  <div className="text-center py-8">
+                    <h2 className="text-xl font-bold text-pornoretro-orange mb-2">No Card Groups Yet</h2>
+                    <p className="text-muted-foreground">
+                      Drag and drop cards onto each other to create groups and organize your thoughts.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    {populatedGroups.map(group => (
+                      <RetroCardGroup 
+                        key={group.id}
+                        id={group.id}
+                        title={group.title}
+                        cards={group.cards}
+                        onVote={handleVoteCard}
+                        onAddComment={handleAddComment}
+                        onCreateAction={handleCreateActionFromCard}
+                        onEditComment={handleEditComment}
+                        onDeleteComment={handleDeleteComment}
+                        onRemoveCard={handleRemoveFromGroup}
+                        onEditTitle={handleEditGroupTitle}
+                        votedCards={votedCards}
+                        currentUser={currentUser}
+                      />
+                    ))}
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
           </div>

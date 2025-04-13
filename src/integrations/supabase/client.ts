@@ -10,7 +10,11 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 interface CustomDatabase extends Database {
   public: {
     Tables: {
-      retro_cards: Database['public']['Tables']['retro_cards'];
+      retro_cards: Database['public']['Tables']['retro_cards'] & {
+        Row: Database['public']['Tables']['retro_cards']['Row'] & { group_id?: string };
+        Insert: Database['public']['Tables']['retro_cards']['Insert'] & { group_id?: string };
+        Update: Database['public']['Tables']['retro_cards']['Update'] & { group_id?: string };
+      };
       retrospectives: Database['public']['Tables']['retrospectives'] & {
         Row: Database['public']['Tables']['retrospectives']['Row'] & { is_anonymous?: boolean };
       };
@@ -120,6 +124,35 @@ interface CustomDatabase extends Database {
           },
           {
             foreignKeyName: "retro_actions_retro_id_fkey";
+            columns: ["retro_id"];
+            isOneToOne: false;
+            referencedRelation: "retrospectives";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      retro_card_groups: {
+        Row: {
+          id: string;
+          retro_id: string;
+          title: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          retro_id: string;
+          title: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          retro_id?: string;
+          title?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "retro_card_groups_retro_id_fkey";
             columns: ["retro_id"];
             isOneToOne: false;
             referencedRelation: "retrospectives";
