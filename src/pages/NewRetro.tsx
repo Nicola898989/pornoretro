@@ -10,12 +10,14 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Lock } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const NewRetro: React.FC = () => {
   const [retroName, setRetroName] = useState('');
   const [teamName, setTeamName] = useState('');
   const [yourName, setYourName] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -23,45 +25,84 @@ const NewRetro: React.FC = () => {
     return Math.random().toString(36).substring(2, 10);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!retroName.trim() || !teamName.trim() || !yourName.trim()) {
       toast({
-        title: "Incomplete form",
-        description: "Please fill in all the required fields",
+        title: "Modulo incompleto",
+        description: "Per favore, compila tutti i campi richiesti",
         variant: "destructive",
       });
       return;
     }
     
-    // In a real application, we'd save this to a database
-    // For now, we'll generate a unique ID and redirect to the retro page
-    const retroId = generateRandomId();
+    setIsLoading(true);
     
-    // Save data to localStorage for our demo
-    const retroData = {
-      id: retroId,
-      name: retroName.trim(),
-      team: teamName.trim(),
-      creator: yourName.trim(),
-      createdAt: new Date().toISOString(),
-      cards: [],
-      actions: [],
-      isAnonymous: isAnonymous
-    };
-    
-    localStorage.setItem(`retro_${retroId}`, JSON.stringify(retroData));
-    
-    // Store the user as the creator
-    localStorage.setItem('currentUser', yourName.trim());
-    
-    toast({
-      title: "Retrospective created!",
-      description: "Your hot new retrospective is ready",
-    });
-    
-    navigate(`/retro/${retroId}`);
+    try {
+      // Generate a unique ID for the retrospective
+      const retroId = generateRandomId();
+      
+      // Save data to localStorage for our demo
+      const retroData = {
+        id: retroId,
+        name: retroName.trim(),
+        team: teamName.trim(),
+        creator: yourName.trim(),
+        createdAt: new Date().toISOString(),
+        cards: [],
+        actions: [],
+        isAnonymous: isAnonymous
+      };
+      
+      localStorage.setItem(`retro_${retroId}`, JSON.stringify(retroData));
+      
+      // Store the user as the creator
+      localStorage.setItem('currentUser', yourName.trim());
+      
+      // Save data to Supabase
+      console.log("Saving retrospective to Supabase:", {
+        id: retroId,
+        name: retroName.trim(),
+        team: teamName.trim(),
+        created_by: yourName.trim()
+      });
+      
+      const { data: supabaseData, error } = await supabase
+        .from('retrospectives')
+        .insert([
+          {
+            id: retroId,
+            name: retroName.trim(),
+            team: teamName.trim(),
+            created_by: yourName.trim()
+          }
+        ])
+        .select();
+      
+      if (error) {
+        console.error("Errore Supabase:", error);
+        throw new Error(error.message);
+      }
+      
+      console.log("Retrospettiva salvata con successo:", supabaseData);
+      
+      toast({
+        title: "Retrospettiva creata!",
+        description: "La tua nuova retrospettiva è pronta",
+      });
+      
+      navigate(`/retro/${retroId}`);
+    } catch (error) {
+      console.error("Errore nella creazione della retrospettiva:", error);
+      toast({
+        title: "Errore",
+        description: "Si è verificato un errore nella creazione della retrospettiva. Riprova più tardi.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -133,8 +174,9 @@ const NewRetro: React.FC = () => {
                 <Button 
                   type="submit" 
                   className="w-full bg-pornoretro-orange text-pornoretro-black hover:bg-pornoretro-darkorange"
+                  disabled={isLoading}
                 >
-                  Create Retrospective
+                  {isLoading ? 'Creating...' : 'Create Retrospective'}
                 </Button>
               </CardFooter>
             </form>
