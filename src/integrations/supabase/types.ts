@@ -9,6 +9,86 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      retro_actions: {
+        Row: {
+          assignee: string | null
+          completed: boolean
+          created_at: string
+          id: string
+          linked_card_content: string | null
+          linked_card_id: string | null
+          linked_card_type: string | null
+          retro_id: string | null
+          text: string
+        }
+        Insert: {
+          assignee?: string | null
+          completed?: boolean
+          created_at?: string
+          id?: string
+          linked_card_content?: string | null
+          linked_card_id?: string | null
+          linked_card_type?: string | null
+          retro_id?: string | null
+          text: string
+        }
+        Update: {
+          assignee?: string | null
+          completed?: boolean
+          created_at?: string
+          id?: string
+          linked_card_content?: string | null
+          linked_card_id?: string | null
+          linked_card_type?: string | null
+          retro_id?: string | null
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retro_actions_linked_card_id_fkey"
+            columns: ["linked_card_id"]
+            isOneToOne: false
+            referencedRelation: "retro_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retro_actions_retro_id_fkey"
+            columns: ["retro_id"]
+            isOneToOne: false
+            referencedRelation: "retrospectives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      retro_card_votes: {
+        Row: {
+          card_id: string | null
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          card_id?: string | null
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          card_id?: string | null
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retro_card_votes_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "retro_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       retro_cards: {
         Row: {
           author: string
@@ -44,11 +124,44 @@ export type Database = {
           },
         ]
       }
+      retro_comments: {
+        Row: {
+          author: string
+          card_id: string | null
+          content: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          author: string
+          card_id?: string | null
+          content: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          author?: string
+          card_id?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retro_comments_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "retro_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       retrospectives: {
         Row: {
           created_at: string
           created_by: string
           id: string
+          is_anonymous: boolean | null
           name: string
           team: string
         }
@@ -56,6 +169,7 @@ export type Database = {
           created_at?: string
           created_by: string
           id: string
+          is_anonymous?: boolean | null
           name: string
           team: string
         }
@@ -63,6 +177,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           id?: string
+          is_anonymous?: boolean | null
           name?: string
           team?: string
         }
