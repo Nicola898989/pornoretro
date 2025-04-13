@@ -15,9 +15,10 @@ interface AddCardFormProps {
 const AddCardForm: React.FC<AddCardFormProps> = ({ onAddCard }) => {
   const [content, setContent] = useState('');
   const [type, setType] = useState<CardType>('hot');
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!content.trim()) {
@@ -29,13 +30,21 @@ const AddCardForm: React.FC<AddCardFormProps> = ({ onAddCard }) => {
       return;
     }
     
-    onAddCard(content.trim(), type);
-    setContent('');
+    setIsLoading(true);
     
-    toast({
-      title: "Card added",
-      description: "Your thought has been added to the retrospective",
-    });
+    try {
+      await onAddCard(content.trim(), type);
+      setContent('');
+    } catch (error) {
+      console.error("Error adding card:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add your card. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -50,9 +59,15 @@ const AddCardForm: React.FC<AddCardFormProps> = ({ onAddCard }) => {
             value={content}
             onChange={(e) => setContent(e.target.value)}
             className="min-h-[100px] bg-secondary text-pornoretro-gray"
+            disabled={isLoading}
           />
           
-          <RadioGroup defaultValue="hot" onValueChange={(val) => setType(val as CardType)} className="flex flex-col space-y-2">
+          <RadioGroup 
+            defaultValue="hot" 
+            onValueChange={(val) => setType(val as CardType)} 
+            className="flex flex-col space-y-2"
+            disabled={isLoading}
+          >
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="hot" id="hot" />
               <Label htmlFor="hot" className="text-green-400">Hot Moment (Something that went well)</Label>
@@ -71,8 +86,9 @@ const AddCardForm: React.FC<AddCardFormProps> = ({ onAddCard }) => {
           <Button 
             type="submit" 
             className="w-full bg-pornoretro-orange text-pornoretro-black hover:bg-pornoretro-darkorange"
+            disabled={isLoading}
           >
-            Post Anonymously
+            {isLoading ? 'Posting...' : 'Post Anonymously'}
           </Button>
         </CardFooter>
       </form>

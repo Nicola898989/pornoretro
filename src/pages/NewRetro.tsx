@@ -43,49 +43,30 @@ const NewRetro: React.FC = () => {
       // Generate a unique ID for the retrospective
       const retroId = generateRandomId();
       
-      // Save data to localStorage for our demo
-      const retroData = {
-        id: retroId,
-        name: retroName.trim(),
-        team: teamName.trim(),
-        creator: yourName.trim(),
-        createdAt: new Date().toISOString(),
-        cards: [],
-        actions: [],
-        isAnonymous: isAnonymous
-      };
-      
-      localStorage.setItem(`retro_${retroId}`, JSON.stringify(retroData));
-      
       // Store the user as the creator
       localStorage.setItem('currentUser', yourName.trim());
       
       // Save data to Supabase
-      console.log("Saving retrospective to Supabase:", {
-        id: retroId,
-        name: retroName.trim(),
-        team: teamName.trim(),
-        created_by: yourName.trim()
-      });
-      
-      const { data: supabaseData, error } = await supabase
+      const { data: retroData, error } = await supabase
         .from('retrospectives')
         .insert([
           {
             id: retroId,
             name: retroName.trim(),
             team: teamName.trim(),
-            created_by: yourName.trim()
+            created_by: yourName.trim(),
+            is_anonymous: isAnonymous
           }
         ])
-        .select();
+        .select()
+        .single();
       
       if (error) {
         console.error("Errore Supabase:", error);
         throw new Error(error.message);
       }
       
-      console.log("Retrospettiva salvata con successo:", supabaseData);
+      console.log("Retrospettiva salvata con successo:", retroData);
       
       toast({
         title: "Retrospettiva creata!",

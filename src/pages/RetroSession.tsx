@@ -42,8 +42,6 @@ interface RetroData {
   team: string;
   creator: string;
   createdAt: string;
-  cards: RetroCard[];
-  actions: ActionItemType[];
   isAnonymous: boolean;
 }
 
@@ -52,6 +50,8 @@ const RetroSession: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [retroData, setRetroData] = useState<RetroData | null>(null);
+  const [cards, setCards] = useState<RetroCard[]>([]);
+  const [actions, setActions] = useState<ActionItemType[]>([]);
   const [currentUser, setCurrentUser] = useState<string>('');
   const [votedCards, setVotedCards] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -75,125 +75,204 @@ const RetroSession: React.FC = () => {
         return;
       }
 
-      const retroKey = `retro_${id}`;
-      const storedRetro = localStorage.getItem(retroKey);
-      
-      console.log(`Checking localStorage for retro with key: ${retroKey}`);
-      console.log(`LocalStorage data found: ${storedRetro ? 'Yes' : 'No'}`);
-      
-      if (!storedRetro) {
-        console.log(`Attempting to fetch retro with ID ${id} from Supabase`);
-        try {
-          const { data: retroData, error } = await supabase
-            .from('retrospectives')
-            .select('*')
-            .eq('id', id)
-            .maybeSingle();
+      try {
+        const { data: retroData, error: retroError } = await supabase
+          .from('retrospectives')
+          .select('*')
+          .eq('id', id)
+          .single();
           
-          console.log("Supabase fetch result:", { retroData, error });
-          
-          if (error) {
-            console.error("Supabase query error:", error);
-            setErrorDetails(`Database error: ${error.message}`);
-            setLoading(false);
-            return;
-          }
-          
-          if (!retroData) {
-            console.error(`No retrospective found with ID: ${id}`);
-            setErrorDetails(`No retrospective found with ID: ${id}. Please check if the ID is correct.`);
-            setLoading(false);
-            return;
-          }
-          
-          const newLocalRetro: RetroData = {
-            id: retroData.id,
-            name: retroData.name,
-            team: retroData.team,
-            creator: retroData.created_by,
-            createdAt: retroData.created_at,
-            cards: [],
-            actions: [],
-            isAnonymous: false
-          };
-          
-          const { data: cardsData, error: cardsError } = await supabase
-            .from('retro_cards')
-            .select('*')
-            .eq('retro_id', id);
-            
-          console.log("Supabase cards data:", { cardsData, cardsError });
-          
-          if (!cardsError && cardsData) {
-            newLocalRetro.cards = cardsData.map(card => ({
-              id: card.id,
-              type: card.type as CardType,
-              content: card.content,
-              author: card.author,
-              votes: 0,
-              voterIds: [],
-              comments: []
-            }));
-          }
-          
-          localStorage.setItem(retroKey, JSON.stringify(newLocalRetro));
-          setRetroData(newLocalRetro);
-          
-          toast({
-            title: "Retrospective loaded from database",
-            description: "Successfully retrieved retrospective from Supabase",
-          });
-        } catch (error) {
-          console.error("Error fetching from Supabase:", error);
-          setErrorDetails(`Failed to find retrospective with ID: ${id}. Error details: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        if (retroError) {
+          console.error("Supabase query error:", retroError);
+          setErrorDetails(`Database error: ${retroError.message}`);
           setLoading(false);
           return;
         }
-      } else {
-        try {
-          const data = JSON.parse(storedRetro) as RetroData;
-          
-          if (!data.cards.some(card => 'comments' in card)) {
-            data.cards = data.cards.map(card => ({
-              ...card,
-              comments: []
-            }));
-            localStorage.setItem(retroKey, JSON.stringify(data));
-          }
-          
-          setRetroData(data);
-        } catch (e) {
-          console.error("Error parsing retro data", e);
-          setErrorDetails(`Error parsing retrospective data. Please try again or create a new retrospective.`);
-          setLoading(false);
-          return;
-        }
-      }
-      
-      const storedUser = localStorage.getItem('currentUser');
-      if (!storedUser) {
-        setJoinDialogOpen(true);
-      } else {
-        setCurrentUser(storedUser);
         
-        if (retroData) {
-          const userVotes = new Set<string>();
-          retroData.cards.forEach(card => {
-            if (card.voterIds && card.voterIds.includes(storedUser)) {
-              userVotes.add(card.id);
-            }
-          });
-          setVotedCards(userVotes);
+        if (!retroData) {
+          console.error(`No retrospective found with ID: ${id}`);
+          setErrorDetails(`No retrospective found with ID: ${id}. Please check if the ID is correct.`);
+          setLoading(false);
+          return;
         }
+        
+        setRetroData({
+          id: retroData.id,
+          name: retroData.name,
+          team: retroData.team,
+          creator: retroData.created_by,
+          createdAt: retroData.created_at,
+          isAnonymous: retroData.is_anonymous || false
+        });
+        
+        await fetchCards();
+        
+        await fetchActions();
+
+        setupRealtimeSubscription();
+        
+        const storedUser = localStorage.getItem('currentUser');
+        if (!storedUser) {
+          setJoinDialogOpen(true);
+        } else {
+          setCurrentUser(storedUser);
+          fetchUserVotes(storedUser);
+        }
+      } catch (error) {
+        console.error("Error loading retrospective:", error);
+        setErrorDetails(`Failed to load retrospective: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadRetro();
+
+    return () => {
+      const channel = supabase.channel('schema-db-changes');
+      supabase.removeChannel(channel);
+    };
+  }, [id]);
+
+  const setupRealtimeSubscription = () => {
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'retro_cards', filter: `retro_id=eq.${id}` },
+          async (payload) => {
+            console.log('Realtime change detected:', payload);
+            await fetchCards();
+          }
+      )
+      .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'retro_actions', filter: `retro_id=eq.${id}` },
+          async (payload) => {
+            console.log('Realtime action change detected:', payload);
+            await fetchActions();
+          }
+      )
+      .subscribe();
+  };
+
+  const fetchCards = async () => {
+    if (!id) return;
+    
+    try {
+      const { data: cardsData, error: cardsError } = await supabase
+        .from('retro_cards')
+        .select('*')
+        .eq('retro_id', id);
+        
+      if (cardsError) {
+        throw cardsError;
       }
       
-      setLoading(false);
-    };
-    
-    loadRetro();
-  }, [id, toast, retroData]);
+      if (cardsData) {
+        const cardsWithVotes = await Promise.all(cardsData.map(async (card) => {
+          const { data: votesData } = await supabase
+            .from('retro_card_votes')
+            .select('user_id')
+            .eq('card_id', card.id);
+          
+          const { data: commentsData } = await supabase
+            .from('retro_comments')
+            .select('*')
+            .eq('card_id', card.id)
+            .order('created_at', { ascending: true });
+          
+          const votes = votesData ? votesData.length : 0;
+          const voterIds = votesData ? votesData.map(vote => vote.user_id) : [];
+          
+          const comments = commentsData ? commentsData.map(comment => ({
+            id: comment.id,
+            author: comment.author,
+            content: comment.content,
+            createdAt: comment.created_at
+          })) : [];
+          
+          return {
+            id: card.id,
+            type: card.type as CardType,
+            content: card.content,
+            author: card.author,
+            votes: votes,
+            voterIds: voterIds,
+            comments: comments
+          };
+        }));
+        
+        setCards(cardsWithVotes);
+      }
+    } catch (error) {
+      console.error("Error fetching cards:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch retrospective cards",
+        variant: "destructive",
+      });
+    }
+  };
 
-  const handleJoinRetro = (e: React.FormEvent) => {
+  const fetchActions = async () => {
+    if (!id) return;
+    
+    try {
+      const { data: actionsData, error: actionsError } = await supabase
+        .from('retro_actions')
+        .select('*')
+        .eq('retro_id', id);
+        
+      if (actionsError) {
+        throw actionsError;
+      }
+      
+      if (actionsData) {
+        setActions(actionsData.map(action => ({
+          id: action.id,
+          text: action.text,
+          assignee: action.assignee || '',
+          completed: action.completed,
+          linkedCardId: action.linked_card_id,
+          linkedCardContent: action.linked_card_content,
+          linkedCardType: action.linked_card_type as CardType | undefined
+        })));
+      }
+    } catch (error) {
+      console.error("Error fetching actions:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch action items",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchUserVotes = async (userId: string) => {
+    if (!id) return;
+    
+    try {
+      const { data: votesData, error: votesError } = await supabase
+        .from('retro_card_votes')
+        .select('card_id')
+        .eq('user_id', userId);
+        
+      if (votesError) {
+        throw votesError;
+      }
+      
+      if (votesData) {
+        const userVotes = new Set<string>();
+        votesData.forEach(vote => {
+          userVotes.add(vote.card_id);
+        });
+        setVotedCards(userVotes);
+      }
+    } catch (error) {
+      console.error("Error fetching user votes:", error);
+    }
+  };
+
+  const handleJoinRetro = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!newUserName.trim()) {
@@ -213,245 +292,278 @@ const RetroSession: React.FC = () => {
       title: "Welcome to the retrospective!",
       description: `You've joined as ${newUserName.trim()}`,
     });
+    
+    await fetchUserVotes(newUserName.trim());
   };
 
-  const saveRetroData = (data: RetroData) => {
-    localStorage.setItem(`retro_${id}`, JSON.stringify(data));
-    setRetroData(data);
-  };
-
-  const handleAddCard = (content: string, type: CardType) => {
-    if (!retroData) return;
+  const handleAddCard = async (content: string, type: CardType) => {
+    if (!retroData || !currentUser) return;
     
-    const newCard: RetroCard = {
-      id: uuidv4(),
-      type,
-      content,
-      author: retroData.isAnonymous ? "Anonymous" : currentUser,
-      votes: 0,
-      voterIds: [],
-      comments: []
-    };
-    
-    const updatedData = {
-      ...retroData,
-      cards: [...retroData.cards, newCard]
-    };
-    
-    saveRetroData(updatedData);
-  };
-
-  const handleVoteCard = (cardId: string) => {
-    if (!retroData) return;
-    
-    const cardIndex = retroData.cards.findIndex(card => card.id === cardId);
-    if (cardIndex === -1) return;
-    
-    const card = retroData.cards[cardIndex];
-    const userVoted = card.voterIds && card.voterIds.includes(currentUser);
-    
-    const updatedCards = [...retroData.cards];
-    if (userVoted) {
-      updatedCards[cardIndex] = {
-        ...card,
-        votes: Math.max(0, card.votes - 1),
-        voterIds: card.voterIds.filter(id => id !== currentUser)
-      };
+    try {
+      const newCardId = uuidv4();
       
-      const updatedVotes = new Set(votedCards);
-      updatedVotes.delete(cardId);
-      setVotedCards(updatedVotes);
+      const { data, error } = await supabase
+        .from('retro_cards')
+        .insert([{
+          id: newCardId,
+          retro_id: retroData.id,
+          type: type,
+          content: content,
+          author: retroData.isAnonymous ? "Anonymous" : currentUser,
+        }])
+        .select();
+      
+      if (error) {
+        throw error;
+      }
       
       toast({
-        title: "Vote removed",
-        description: "Your vote has been removed from this card",
+        title: "Card added",
+        description: "Your thought has been added to the retrospective",
       });
-    } else {
-      updatedCards[cardIndex] = {
-        ...card,
-        votes: card.votes + 1,
-        voterIds: [...(card.voterIds || []), currentUser]
-      };
       
-      const updatedVotes = new Set(votedCards);
-      updatedVotes.add(cardId);
-      setVotedCards(updatedVotes);
+      await fetchCards();
+    } catch (error) {
+      console.error("Error adding card:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add card. Please try again.",
+        variant: "destructive",
+      });
     }
-    
-    const updatedData = {
-      ...retroData,
-      cards: updatedCards
-    };
-    
-    saveRetroData(updatedData);
   };
 
-  const handleAddComment = (cardId: string, content: string) => {
-    if (!retroData) return;
+  const handleVoteCard = async (cardId: string) => {
+    if (!retroData || !currentUser) return;
     
-    const newComment: Comment = {
-      id: uuidv4(),
-      author: retroData.isAnonymous ? "Anonymous" : currentUser,
-      content,
-      createdAt: new Date().toISOString()
-    };
+    const hasVoted = votedCards.has(cardId);
     
-    const updatedCards = retroData.cards.map(card => {
-      if (card.id === cardId) {
-        return {
-          ...card,
-          comments: [...(card.comments || []), newComment]
-        };
-      }
-      return card;
-    });
-    
-    const updatedData = {
-      ...retroData,
-      cards: updatedCards
-    };
-    
-    saveRetroData(updatedData);
-    
-    toast({
-      title: "Comment added",
-      description: "Your comment has been added to the card",
-    });
-  };
-
-  const handleEditComment = (cardId: string, commentId: string, newContent: string) => {
-    if (!retroData) return;
-    
-    const updatedCards = retroData.cards.map(card => {
-      if (card.id === cardId) {
-        const updatedComments = card.comments.map(comment => {
-          if (comment.id === commentId) {
-            return {
-              ...comment,
-              content: newContent,
-            };
-          }
-          return comment;
-        });
+    try {
+      if (hasVoted) {
+        const { error } = await supabase
+          .from('retro_card_votes')
+          .delete()
+          .eq('card_id', cardId)
+          .eq('user_id', currentUser);
         
-        return {
-          ...card,
-          comments: updatedComments
-        };
+        if (error) throw error;
+        
+        const updatedVotes = new Set(votedCards);
+        updatedVotes.delete(cardId);
+        setVotedCards(updatedVotes);
+        
+        toast({
+          title: "Vote removed",
+          description: "Your vote has been removed from this card",
+        });
+      } else {
+        const { error } = await supabase
+          .from('retro_card_votes')
+          .insert([{
+            card_id: cardId,
+            user_id: currentUser
+          }]);
+        
+        if (error) throw error;
+        
+        const updatedVotes = new Set(votedCards);
+        updatedVotes.add(cardId);
+        setVotedCards(updatedVotes);
+        
+        toast({
+          title: "Vote added",
+          description: "Your vote has been added to this card",
+        });
       }
-      return card;
-    });
-    
-    const updatedData = {
-      ...retroData,
-      cards: updatedCards
-    };
-    
-    saveRetroData(updatedData);
-    
-    toast({
-      title: "Comment updated",
-      description: "Your comment has been updated",
-    });
+      
+      await fetchCards();
+    } catch (error) {
+      console.error("Error updating vote:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update vote. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDeleteComment = (cardId: string, commentId: string) => {
-    if (!retroData) return;
+  const handleAddComment = async (cardId: string, content: string) => {
+    if (!retroData || !currentUser) return;
     
-    const updatedCards = retroData.cards.map(card => {
-      if (card.id === cardId) {
-        return {
-          ...card,
-          comments: card.comments.filter(comment => comment.id !== commentId)
-        };
-      }
-      return card;
-    });
-    
-    const updatedData = {
-      ...retroData,
-      cards: updatedCards
-    };
-    
-    saveRetroData(updatedData);
-    
-    toast({
-      title: "Comment deleted",
-      description: "Your comment has been removed",
-    });
+    try {
+      const newCommentId = uuidv4();
+      
+      const { error } = await supabase
+        .from('retro_comments')
+        .insert([{
+          id: newCommentId,
+          card_id: cardId,
+          author: retroData.isAnonymous ? "Anonymous" : currentUser,
+          content: content
+        }]);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Comment added",
+        description: "Your comment has been added to the card",
+      });
+      
+      await fetchCards();
+    } catch (error) {
+      console.error("Error adding comment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add comment. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleAddActionItem = (text: string, assignee: string, cardId?: string) => {
+  const handleEditComment = async (cardId: string, commentId: string, newContent: string) => {
+    try {
+      const { error } = await supabase
+        .from('retro_comments')
+        .update({ content: newContent })
+        .eq('id', commentId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Comment updated",
+        description: "Your comment has been updated",
+      });
+      
+      await fetchCards();
+    } catch (error) {
+      console.error("Error updating comment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update comment. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteComment = async (cardId: string, commentId: string) => {
+    try {
+      const { error } = await supabase
+        .from('retro_comments')
+        .delete()
+        .eq('id', commentId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Comment deleted",
+        description: "Your comment has been removed",
+      });
+      
+      await fetchCards();
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete comment. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddActionItem = async (text: string, assignee: string, cardId?: string) => {
     if (!retroData) return;
     
     let linkedCardContent: string | undefined = undefined;
     let linkedCardType: CardType | undefined = undefined;
     
     if (cardId) {
-      const linkedCard = retroData.cards.find(card => card.id === cardId);
+      const linkedCard = cards.find(card => card.id === cardId);
       if (linkedCard) {
         linkedCardContent = linkedCard.content;
         linkedCardType = linkedCard.type;
       }
     }
     
-    const newAction: ActionItemType = {
-      id: uuidv4(),
-      text,
-      assignee,
-      completed: false,
-      linkedCardId: cardId,
-      linkedCardContent,
-      linkedCardType
-    };
-    
-    const updatedData = {
-      ...retroData,
-      actions: [...retroData.actions, newAction]
-    };
-    
-    saveRetroData(updatedData);
-    
-    if (createActionDialogOpen) {
-      setCreateActionDialogOpen(false);
-      setSelectedCardForAction(null);
+    try {
+      const newActionId = uuidv4();
+      
+      const { error } = await supabase
+        .from('retro_actions')
+        .insert([{
+          id: newActionId,
+          retro_id: retroData.id,
+          text: text,
+          assignee: assignee || null,
+          completed: false,
+          linked_card_id: cardId || null,
+          linked_card_content: linkedCardContent || null,
+          linked_card_type: linkedCardType || null
+        }]);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Action item added",
+        description: "New action item has been added to the list",
+      });
+      
+      if (createActionDialogOpen) {
+        setCreateActionDialogOpen(false);
+        setSelectedCardForAction(null);
+      }
+      
+      await fetchActions();
+    } catch (error) {
+      console.error("Error adding action item:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add action item. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleToggleActionComplete = (actionId: string) => {
-    if (!retroData) return;
+  const handleToggleActionComplete = async (actionId: string) => {
+    const action = actions.find(a => a.id === actionId);
+    if (!action) return;
     
-    const updatedActions = retroData.actions.map(action => {
-      if (action.id === actionId) {
-        return {
-          ...action,
-          completed: !action.completed
-        };
-      }
-      return action;
-    });
-    
-    const updatedData = {
-      ...retroData,
-      actions: updatedActions
-    };
-    
-    saveRetroData(updatedData);
+    try {
+      const { error } = await supabase
+        .from('retro_actions')
+        .update({ completed: !action.completed })
+        .eq('id', actionId);
+      
+      if (error) throw error;
+      
+      await fetchActions();
+    } catch (error) {
+      console.error("Error updating action item:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update action item. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDeleteAction = (actionId: string) => {
-    if (!retroData) return;
-    
-    const updatedActions = retroData.actions.filter(
-      action => action.id !== actionId
-    );
-    
-    const updatedData = {
-      ...retroData,
-      actions: updatedActions
-    };
-    
-    saveRetroData(updatedData);
+  const handleDeleteAction = async (actionId: string) => {
+    try {
+      const { error } = await supabase
+        .from('retro_actions')
+        .delete()
+        .eq('id', actionId);
+      
+      if (error) throw error;
+      
+      await fetchActions();
+    } catch (error) {
+      console.error("Error deleting action item:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete action item. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleCreateActionFromCard = (cardId: string) => {
@@ -537,16 +649,16 @@ const RetroSession: React.FC = () => {
     );
   }
 
-  const hotCards = retroData.cards.filter(card => card.type === 'hot');
-  const disappointmentCards = retroData.cards.filter(card => card.type === 'disappointment');
-  const fantasyCards = retroData.cards.filter(card => card.type === 'fantasy');
+  const hotCards = cards.filter(card => card.type === 'hot');
+  const disappointmentCards = cards.filter(card => card.type === 'disappointment');
+  const fantasyCards = cards.filter(card => card.type === 'fantasy');
 
   const sortByVotes = (a: RetroCard, b: RetroCard) => b.votes - a.votes;
   hotCards.sort(sortByVotes);
   disappointmentCards.sort(sortByVotes);
   fantasyCards.sort(sortByVotes);
 
-  const cardOptions = retroData.cards.map(card => ({
+  const cardOptions = cards.map(card => ({
     id: card.id,
     content: card.content,
     type: card.type
@@ -583,8 +695,8 @@ const RetroSession: React.FC = () => {
               retroName={retroData.name}
               teamName={retroData.team}
               createdAt={retroData.createdAt}
-              cards={retroData.cards}
-              actions={retroData.actions}
+              cards={cards}
+              actions={actions}
             />
             <Button 
               variant="outline" 
@@ -780,10 +892,10 @@ const RetroSession: React.FC = () => {
               <h2 className="text-xl font-bold text-pornoretro-orange mb-4">Action Items</h2>
               <div className="space-y-4">
                 <div className="space-y-3">
-                  {retroData.actions.length === 0 ? (
+                  {actions.length === 0 ? (
                     <p className="text-muted-foreground">No action items yet</p>
                   ) : (
-                    retroData.actions.map(action => (
+                    actions.map(action => (
                       <ActionItem 
                         key={action.id} 
                         item={action} 
