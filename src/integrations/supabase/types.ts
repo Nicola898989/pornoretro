@@ -60,6 +60,27 @@ export type Database = {
           },
         ]
       }
+      retro_card_groups: {
+        Row: {
+          created_at: string
+          id: string
+          retro_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          retro_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          retro_id?: string
+          title?: string
+        }
+        Relationships: []
+      }
       retro_card_votes: {
         Row: {
           card_id: string | null
@@ -94,6 +115,7 @@ export type Database = {
           author: string
           content: string
           created_at: string
+          group_id: string | null
           id: string
           retro_id: string
           type: string
@@ -102,6 +124,7 @@ export type Database = {
           author: string
           content: string
           created_at?: string
+          group_id?: string | null
           id?: string
           retro_id: string
           type: string
@@ -110,6 +133,7 @@ export type Database = {
           author?: string
           content?: string
           created_at?: string
+          group_id?: string | null
           id?: string
           retro_id?: string
           type?: string

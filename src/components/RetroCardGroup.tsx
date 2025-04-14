@@ -67,12 +67,23 @@ const RetroCardGroup: React.FC<RetroCardGroupProps> = ({
   const handleDragLeave = () => {
     setIsDropTarget(false);
   };
+  
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDropTarget(false);
+    
+    const cardId = e.dataTransfer.getData('card_id');
+    if (cardId) {
+      console.log(`Card dropped into group: ${cardId} into group ${id}`);
+    }
+  };
 
   return (
     <Card 
       className={`border-2 border-pornoretro-darkorange bg-gradient-to-br from-pornoretro-black to-pornoretro-black/80 overflow-hidden ${isDropTarget ? 'ring-2 ring-pornoretro-orange ring-opacity-60' : ''}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
       <CardHeader className="bg-pornoretro-darkorange/20 px-4 py-2">
         {isEditingTitle ? (

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -86,7 +85,6 @@ const RetroSession: React.FC = () => {
       }
 
       try {
-        // First try to get the retrospective data using select (multiple rows query)
         const { data: retroDataArray, error: retroSelectError } = await supabase
           .from('retrospectives')
           .select('*')
@@ -99,7 +97,6 @@ const RetroSession: React.FC = () => {
           return;
         }
         
-        // Check if any data was returned
         if (!retroDataArray || retroDataArray.length === 0) {
           console.error(`No retrospective found with ID: ${id}`);
           setErrorDetails(`No retrospective found with ID: ${id}. Please check if the ID is correct.`);
@@ -107,7 +104,6 @@ const RetroSession: React.FC = () => {
           return;
         }
         
-        // Use the first item in the array
         const retroData = retroDataArray[0];
         
         setRetroData({
@@ -120,9 +116,7 @@ const RetroSession: React.FC = () => {
         });
         
         await fetchCards();
-        
         await fetchActions();
-        
         await fetchCardGroups();
 
         setupRealtimeSubscription();
@@ -151,26 +145,35 @@ const RetroSession: React.FC = () => {
   }, [id]);
 
   const setupRealtimeSubscription = () => {
+    try {
+      const channels = supabase.getChannels();
+      channels.forEach(channel => {
+        supabase.removeChannel(channel);
+      });
+    } catch (error) {
+      console.error("Error removing channels:", error);
+    }
+    
     const channel = supabase
       .channel('schema-db-changes')
       .on('postgres_changes', 
           { event: '*', schema: 'public', table: 'retro_cards', filter: `retro_id=eq.${id}` },
-          async (payload) => {
-            console.log('Realtime card change detected:', payload);
+          async () => {
+            console.log('Realtime card change detected');
             await fetchCards();
           }
       )
       .on('postgres_changes',
           { event: '*', schema: 'public', table: 'retro_actions', filter: `retro_id=eq.${id}` },
-          async (payload) => {
-            console.log('Realtime action change detected:', payload);
+          async () => {
+            console.log('Realtime action change detected');
             await fetchActions();
           }
       )
       .on('postgres_changes',
           { event: '*', schema: 'public', table: 'retro_card_votes' },
-          async (payload) => {
-            console.log('Realtime vote change detected:', payload);
+          async () => {
+            console.log('Realtime vote change detected');
             await fetchCards();
             if (currentUser) {
               await fetchUserVotes(currentUser);
@@ -179,20 +182,23 @@ const RetroSession: React.FC = () => {
       )
       .on('postgres_changes',
           { event: '*', schema: 'public', table: 'retro_comments' },
-          async (payload) => {
-            console.log('Realtime comment change detected:', payload);
+          async () => {
+            console.log('Realtime comment change detected');
             await fetchCards();
           }
       )
       .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'retro_card_groups' },
-          async (payload) => {
-            console.log('Realtime card group change detected:', payload);
+          { event: '*', schema: 'public', table: 'retro_card_groups', filter: `retro_id=eq.${id}` },
+          async () => {
+            console.log('Realtime card group change detected');
             await fetchCardGroups();
-            await fetchCards();
           }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+      });
+      
+    console.log('Realtime subscription set up with channel ID:', channel.id);
   };
 
   const fetchCards = async () => {
@@ -628,9 +634,9 @@ const RetroSession: React.FC = () => {
   const handleCreateGroup = async (cardId: string, targetCardId: string) => {
     if (!retroData) return;
     
+    console.log(`Creating group with cards: ${cardId} and ${targetCardId}`);
+    
     try {
-      console.log(`Creating group with cards: ${cardId} and ${targetCardId}`);
-      
       const card = cards.find(c => c.id === cardId);
       const targetCard = cards.find(c => c.id === targetCardId);
       
@@ -647,81 +653,98 @@ const RetroSession: React.FC = () => {
       console.log("Source card:", card);
       console.log("Target card:", targetCard);
       
-      // If the target card is already in a group, add the card to that group
       if (targetCard.groupId) {
         console.log(`Adding card ${cardId} to existing group ${targetCard.groupId}`);
         
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('retro_cards')
           .update({ group_id: targetCard.groupId })
-          .eq('id', cardId)
-          .select();
+          .eq('id', cardId);
           
         if (error) {
           console.error("Error adding card to group:", error);
-          throw error;
+          toast({
+            title: "Error",
+            description: "Failed to group cards. Please try again.",
+            variant: "destructive",
+          });
+          return;
         }
-        
-        console.log("Update response:", data);
         
         toast({
           title: "Cards grouped",
           description: "The card has been added to the existing group",
         });
+        
+        await fetchCards();
       } 
-      // If both cards are not in a group, create a new group
       else {
-        // Create a new group
         const newGroupId = uuidv4();
-        const groupTitle = `${card.type} Group`;
+        const groupTitle = `${card.type.charAt(0).toUpperCase() + card.type.slice(1)} Group`;
         
         console.log(`Creating new group ${newGroupId} with title "${groupTitle}"`);
         
-        const { data: groupData, error: groupError } = await supabase
+        const { error: groupError } = await supabase
           .from('retro_card_groups')
-          .insert([{
+          .insert({
             id: newGroupId,
             retro_id: retroData.id,
-            title: groupTitle,
-            created_at: new Date().toISOString()
-          }])
-          .select();
+            title: groupTitle
+          });
           
         if (groupError) {
           console.error("Error creating group:", groupError);
-          throw groupError;
+          toast({
+            title: "Error",
+            description: "Failed to create group. Please try again.",
+            variant: "destructive",
+          });
+          return;
         }
         
-        console.log("New group created:", groupData);
-        
-        // Add both cards to the new group
-        const { data: cardsData, error: cardsError } = await supabase
+        const { error: card1Error } = await supabase
           .from('retro_cards')
           .update({ group_id: newGroupId })
-          .in('id', [cardId, targetCardId])
-          .select();
+          .eq('id', cardId);
           
-        if (cardsError) {
-          console.error("Error updating cards with group_id:", cardsError);
-          throw cardsError;
+        if (card1Error) {
+          console.error("Error updating first card with group_id:", card1Error);
+          toast({
+            title: "Error",
+            description: "Failed to add card to group. Please try again.",
+            variant: "destructive",
+          });
+          return;
         }
         
-        console.log("Cards updated with group_id:", cardsData);
+        const { error: card2Error } = await supabase
+          .from('retro_cards')
+          .update({ group_id: newGroupId })
+          .eq('id', targetCardId);
+          
+        if (card2Error) {
+          console.error("Error updating second card with group_id:", card2Error);
+          toast({
+            title: "Error",
+            description: "Failed to add card to group. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
         
         toast({
           title: "New group created",
           description: "Cards have been grouped together",
         });
+        
+        await fetchCards();
+        await fetchCardGroups();
       }
-      
-      // Refresh data
-      await fetchCards();
-      await fetchCardGroups();
     } catch (error) {
       console.error("Error grouping cards:", error);
       toast({
         title: "Error",
-        description: "Failed to group cards. Please try again.",
+        description: `Failed to group cards: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     }
@@ -855,7 +878,6 @@ const RetroSession: React.FC = () => {
     );
   }
 
-  // Prepare card data
   const groupedCards = cards.filter(card => card.groupId);
   const ungroupedCards = cards.filter(card => !card.groupId);
   
@@ -868,7 +890,6 @@ const RetroSession: React.FC = () => {
   disappointmentCards.sort(sortByVotes);
   fantasyCards.sort(sortByVotes);
 
-  // Prepare groups with their cards
   const populatedGroups = cardGroups.map(group => ({
     ...group,
     cards: groupedCards.filter(card => card.groupId === group.id)

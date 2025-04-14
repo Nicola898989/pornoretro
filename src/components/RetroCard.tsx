@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { ThumbsUp, MessageCircle, PlusCircle, Pencil, Trash, Check, X, Move, LogOut } from 'lucide-react';
+import { ThumbsUp, MessageCircle, PlusCircle, Pencil, Trash, Check, X, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -110,13 +111,16 @@ const RetroCard: React.FC<RetroCardProps> = ({
 
   // Drag and drop handling
   const handleDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.setData('text/plain', id);
+    e.dataTransfer.setData('card_id', id);
     e.dataTransfer.effectAllowed = 'move';
     setIsDragging(true);
     
     if (e.currentTarget instanceof HTMLElement) {
       e.currentTarget.style.opacity = '0.6';
     }
+    
+    // Log the drag operation for debugging
+    console.log(`Started dragging card: ${id}`);
   };
 
   const handleDragEnd = (e: React.DragEvent) => {
@@ -125,9 +129,14 @@ const RetroCard: React.FC<RetroCardProps> = ({
     if (e.currentTarget instanceof HTMLElement) {
       e.currentTarget.style.opacity = '1';
     }
+    
+    console.log(`Finished dragging card: ${id}`);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
+    // Only process if this card can be a drop target
+    if (inGroup || !onDrop) return;
+    
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     
@@ -143,8 +152,11 @@ const RetroCard: React.FC<RetroCardProps> = ({
   };
 
   const handleDrop = (e: React.DragEvent) => {
+    // Only process if this card can be a drop target
+    if (inGroup || !onDrop) return;
+    
     e.preventDefault();
-    const draggedCardId = e.dataTransfer.getData('text/plain');
+    const draggedCardId = e.dataTransfer.getData('card_id');
     
     if (e.currentTarget instanceof HTMLElement) {
       e.currentTarget.classList.remove('drag-over');
