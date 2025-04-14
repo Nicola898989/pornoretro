@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
@@ -114,22 +113,45 @@ const RetroCard: React.FC<RetroCardProps> = ({
     e.dataTransfer.setData('text/plain', id);
     e.dataTransfer.effectAllowed = 'move';
     setIsDragging(true);
+    
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '0.6';
+    }
   };
 
-  const handleDragEnd = () => {
+  const handleDragEnd = (e: React.DragEvent) => {
     setIsDragging(false);
+    
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '1';
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.classList.add('drag-over');
+    }
+  };
+  
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.classList.remove('drag-over');
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const draggedCardId = e.dataTransfer.getData('text/plain');
     
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.classList.remove('drag-over');
+    }
+    
     if (draggedCardId && draggedCardId !== id && onDrop) {
+      console.log(`Dropping card ${draggedCardId} onto card ${id}`);
       onDrop(draggedCardId, id);
     }
   };
@@ -140,12 +162,14 @@ const RetroCard: React.FC<RetroCardProps> = ({
         "border-2 transition-all", 
         cardStyles[type],
         isDragging ? "opacity-60 scale-95" : "",
-        inGroup ? "border-opacity-70" : ""
+        inGroup ? "border-opacity-70" : "",
+        "hover:border-opacity-100"
       )}
       draggable={!inGroup}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       <CardHeader>

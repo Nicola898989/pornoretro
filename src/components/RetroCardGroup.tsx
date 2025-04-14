@@ -47,6 +47,7 @@ const RetroCardGroup: React.FC<RetroCardGroupProps> = ({
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [newTitle, setNewTitle] = useState(title);
+  const [isDropTarget, setIsDropTarget] = useState(false);
 
   const handleEditTitle = () => {
     if (newTitle.trim()) {
@@ -56,9 +57,23 @@ const RetroCardGroup: React.FC<RetroCardGroupProps> = ({
   };
 
   const sortedCards = [...cards].sort((a, b) => b.votes - a.votes);
+  
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (!isDropTarget) setIsDropTarget(true);
+  };
+  
+  const handleDragLeave = () => {
+    setIsDropTarget(false);
+  };
 
   return (
-    <Card className="border-2 border-pornoretro-darkorange bg-gradient-to-br from-pornoretro-black to-pornoretro-black/80 overflow-hidden">
+    <Card 
+      className={`border-2 border-pornoretro-darkorange bg-gradient-to-br from-pornoretro-black to-pornoretro-black/80 overflow-hidden ${isDropTarget ? 'ring-2 ring-pornoretro-orange ring-opacity-60' : ''}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+    >
       <CardHeader className="bg-pornoretro-darkorange/20 px-4 py-2">
         {isEditingTitle ? (
           <div className="flex items-center gap-2">

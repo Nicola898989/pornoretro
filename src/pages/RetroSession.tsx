@@ -628,50 +628,85 @@ const RetroSession: React.FC = () => {
   const handleCreateGroup = async (cardId: string, targetCardId: string) => {
     if (!retroData) return;
     
-    const card = cards.find(c => c.id === cardId);
-    const targetCard = cards.find(c => c.id === targetCardId);
-    
-    if (!card || !targetCard) return;
-    
     try {
-      // Se la carta target è già in un gruppo, aggiungi la carta a quel gruppo
+      console.log(`Creating group with cards: ${cardId} and ${targetCardId}`);
+      
+      const card = cards.find(c => c.id === cardId);
+      const targetCard = cards.find(c => c.id === targetCardId);
+      
+      if (!card || !targetCard) {
+        console.error("One or both cards not found", { cardId, targetCardId });
+        toast({
+          title: "Error",
+          description: "Could not find the cards to group",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      console.log("Source card:", card);
+      console.log("Target card:", targetCard);
+      
+      // If the target card is already in a group, add the card to that group
       if (targetCard.groupId) {
-        const { error } = await supabase
+        console.log(`Adding card ${cardId} to existing group ${targetCard.groupId}`);
+        
+        const { data, error } = await supabase
           .from('retro_cards')
           .update({ group_id: targetCard.groupId })
-          .eq('id', cardId);
+          .eq('id', cardId)
+          .select();
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error adding card to group:", error);
+          throw error;
+        }
+        
+        console.log("Update response:", data);
         
         toast({
           title: "Cards grouped",
           description: "The card has been added to the existing group",
         });
       } 
-      // Se entrambe le carte non sono in un gruppo, crea un nuovo gruppo
+      // If both cards are not in a group, create a new group
       else {
-        // Crea un nuovo gruppo
+        // Create a new group
         const newGroupId = uuidv4();
         const groupTitle = `${card.type} Group`;
         
-        const { error: groupError } = await supabase
+        console.log(`Creating new group ${newGroupId} with title "${groupTitle}"`);
+        
+        const { data: groupData, error: groupError } = await supabase
           .from('retro_card_groups')
           .insert([{
             id: newGroupId,
             retro_id: retroData.id,
             title: groupTitle,
             created_at: new Date().toISOString()
-          }]);
+          }])
+          .select();
           
-        if (groupError) throw groupError;
+        if (groupError) {
+          console.error("Error creating group:", groupError);
+          throw groupError;
+        }
         
-        // Aggiungi entrambe le carte al nuovo gruppo
-        const { error: cardsError } = await supabase
+        console.log("New group created:", groupData);
+        
+        // Add both cards to the new group
+        const { data: cardsData, error: cardsError } = await supabase
           .from('retro_cards')
           .update({ group_id: newGroupId })
-          .in('id', [cardId, targetCardId]);
+          .in('id', [cardId, targetCardId])
+          .select();
           
-        if (cardsError) throw cardsError;
+        if (cardsError) {
+          console.error("Error updating cards with group_id:", cardsError);
+          throw cardsError;
+        }
+        
+        console.log("Cards updated with group_id:", cardsData);
         
         toast({
           title: "New group created",
@@ -679,6 +714,7 @@ const RetroSession: React.FC = () => {
         });
       }
       
+      // Refresh data
       await fetchCards();
       await fetchCardGroups();
     } catch (error) {
