@@ -168,7 +168,15 @@ interface CustomDatabase {
           title?: string;
           created_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "retro_card_groups_retro_id_fkey";
+            columns: ["retro_id"];
+            isOneToOne: false;
+            referencedRelation: "retrospectives";
+            referencedColumns: ["id"];
+          }
+        ];
       };
     };
     Views: Record<string, unknown>;
