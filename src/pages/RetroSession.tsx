@@ -811,6 +811,42 @@ const RetroSession: React.FC = () => {
     setShareDialogOpen(false);
   };
 
+  const moveCardToGroup = (cardId: string, targetGroupId: string) => {
+    const cardToMove = cards.find(card => card.id === cardId);
+    const targetGroup = cardGroups.find(group => group.id === targetGroupId);
+
+    if (cardToMove && targetGroup) {
+      if (cardToMove.type === targetGroup.type) {
+        updateCardGroup(cardId, targetGroupId);
+      }
+    }
+  };
+
+  const updateCardGroup = async (cardId: string, targetGroupId: string) => {
+    try {
+      const { error } = await supabase
+        .from('retro_cards')
+        .update({ group_id: targetGroupId })
+        .eq('id', cardId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Card moved to group",
+        description: "The card has been moved to the new group",
+      });
+      
+      await fetchCards();
+    } catch (error) {
+      console.error("Error moving card to group:", error);
+      toast({
+        title: "Error",
+        description: "Failed to move card to group. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col min-h-screen bg-pornoretro-black">

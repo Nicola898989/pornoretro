@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import RetroCard, { CardType, Comment } from './RetroCard';
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
