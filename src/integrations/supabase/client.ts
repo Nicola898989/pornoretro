@@ -7,16 +7,65 @@ const SUPABASE_URL = "https://etwslrnlufpvenffllgd.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3Nscm5sdWZwdmVuZmZsbGdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ0NTA1OTUsImV4cCI6MjA2MDAyNjU5NX0.N5STAGhF5bENToszNyrwD3HNI2AFm6VJThDb-JJOEg0";
 
 // Create a custom type that extends the Database type with our additional tables
-interface CustomDatabase extends Database {
+interface CustomDatabase {
   public: {
     Tables: {
-      retro_cards: Database['public']['Tables']['retro_cards'] & {
-        Row: Database['public']['Tables']['retro_cards']['Row'] & { group_id?: string };
-        Insert: Database['public']['Tables']['retro_cards']['Insert'] & { group_id?: string };
-        Update: Database['public']['Tables']['retro_cards']['Update'] & { group_id?: string };
+      retro_cards: {
+        Row: {
+          id: string;
+          retro_id: string;
+          type: string;
+          author: string;
+          content: string;
+          created_at: string;
+          group_id?: string;
+        };
+        Insert: {
+          id?: string;
+          retro_id: string;
+          type: string;
+          author: string;
+          content: string;
+          created_at?: string;
+          group_id?: string;
+        };
+        Update: {
+          id?: string;
+          retro_id?: string;
+          type?: string;
+          author?: string;
+          content?: string;
+          created_at?: string;
+          group_id?: string;
+        };
+        Relationships: [];
       };
-      retrospectives: Database['public']['Tables']['retrospectives'] & {
-        Row: Database['public']['Tables']['retrospectives']['Row'] & { is_anonymous?: boolean };
+      retrospectives: {
+        Row: {
+          id: string;
+          name: string;
+          team: string;
+          created_by: string;
+          created_at: string;
+          is_anonymous?: boolean;
+        };
+        Insert: {
+          id: string;
+          name: string;
+          team: string;
+          created_by: string;
+          created_at?: string;
+          is_anonymous?: boolean;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          team?: string;
+          created_by?: string;
+          created_at?: string;
+          is_anonymous?: boolean;
+        };
+        Relationships: [];
       };
       // Additional tables
       retro_card_votes: {
@@ -38,15 +87,7 @@ interface CustomDatabase extends Database {
           user_id?: string;
           created_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "retro_card_votes_card_id_fkey";
-            columns: ["card_id"];
-            isOneToOne: false;
-            referencedRelation: "retro_cards";
-            referencedColumns: ["id"];
-          }
-        ];
+        Relationships: [];
       };
       retro_comments: {
         Row: {
@@ -70,15 +111,7 @@ interface CustomDatabase extends Database {
           content?: string;
           created_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "retro_comments_card_id_fkey";
-            columns: ["card_id"];
-            isOneToOne: false;
-            referencedRelation: "retro_cards";
-            referencedColumns: ["id"];
-          }
-        ];
+        Relationships: [];
       };
       retro_actions: {
         Row: {
@@ -114,22 +147,7 @@ interface CustomDatabase extends Database {
           linked_card_type?: string | null;
           created_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "retro_actions_linked_card_id_fkey";
-            columns: ["linked_card_id"];
-            isOneToOne: false;
-            referencedRelation: "retro_cards";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "retro_actions_retro_id_fkey";
-            columns: ["retro_id"];
-            isOneToOne: false;
-            referencedRelation: "retrospectives";
-            referencedColumns: ["id"];
-          }
-        ];
+        Relationships: [];
       };
       retro_card_groups: {
         Row: {
@@ -150,21 +168,13 @@ interface CustomDatabase extends Database {
           title?: string;
           created_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "retro_card_groups_retro_id_fkey";
-            columns: ["retro_id"];
-            isOneToOne: false;
-            referencedRelation: "retrospectives";
-            referencedColumns: ["id"];
-          }
-        ];
+        Relationships: [];
       };
     };
-    Views: Database['public']['Views'];
-    Functions: Database['public']['Functions'];
-    Enums: Database['public']['Enums'];
-    CompositeTypes: Database['public']['CompositeTypes'];
+    Views: Record<string, unknown>;
+    Functions: Record<string, unknown>;
+    Enums: Record<string, unknown>;
+    CompositeTypes: Record<string, unknown>;
   };
 }
 

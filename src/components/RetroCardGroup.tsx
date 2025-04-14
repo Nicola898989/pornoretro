@@ -4,7 +4,14 @@ import RetroCard, { CardType, Comment } from './RetroCard';
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Pencil, Save, X } from 'lucide-react';
+import { Pencil, Save, X, ChevronDown, ChevronUp, Layers } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { 
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface RetroCardType {
   id: string;
@@ -48,6 +55,7 @@ const RetroCardGroup: React.FC<RetroCardGroupProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [newTitle, setNewTitle] = useState(title);
   const [isDropTarget, setIsDropTarget] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const handleEditTitle = () => {
     if (newTitle.trim()) {
@@ -57,6 +65,9 @@ const RetroCardGroup: React.FC<RetroCardGroupProps> = ({
   };
 
   const sortedCards = [...cards].sort((a, b) => b.votes - a.votes);
+  
+  // Get the primary card (with most votes) to display when collapsed
+  const primaryCard = sortedCards.length > 0 ? sortedCards[0] : null;
   
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -117,39 +128,92 @@ const RetroCardGroup: React.FC<RetroCardGroupProps> = ({
         ) : (
           <div className="flex items-center justify-between">
             <h3 className="text-xl font-bold text-pornoretro-orange">{title}</h3>
-            <Button 
-              size="icon" 
-              variant="ghost" 
-              className="h-8 w-8 text-pornoretro-orange hover:text-pornoretro-darkorange hover:bg-secondary/50"
-              onClick={() => setIsEditingTitle(true)}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                {cards.length} card{cards.length !== 1 ? 's' : ''}
+              </span>
+              <Button 
+                size="icon" 
+                variant="ghost" 
+                className="h-8 w-8 text-pornoretro-orange hover:text-pornoretro-darkorange hover:bg-secondary/50"
+                onClick={() => setIsEditingTitle(true)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         )}
       </CardHeader>
       
-      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-        {sortedCards.map(card => (
-          <RetroCard
-            key={card.id}
-            id={card.id}
-            type={card.type}
-            content={card.content}
-            author={card.author}
-            votes={card.votes}
-            comments={card.comments}
-            onVote={onVote}
-            onAddComment={onAddComment}
-            onCreateAction={onCreateAction}
-            onEditComment={onEditComment}
-            onDeleteComment={onDeleteComment}
-            onRemoveFromGroup={() => onRemoveCard(card.id)}
-            hasVoted={votedCards.has(card.id)}
-            currentUser={currentUser}
-            inGroup={true}
-          />
-        ))}
+      <CardContent className="p-4">
+        {cards.length > 0 ? (
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="cards" className="border-b-0">
+              <div className="relative">
+                {/* Primary Card - Always visible */}
+                <div className="mb-2">
+                  <RetroCard
+                    key={primaryCard?.id}
+                    id={primaryCard?.id || ''}
+                    type={primaryCard?.type || 'hot'}
+                    content={primaryCard?.content || ''}
+                    author={primaryCard?.author || ''}
+                    votes={primaryCard?.votes || 0}
+                    comments={primaryCard?.comments || []}
+                    onVote={onVote}
+                    onAddComment={onAddComment}
+                    onCreateAction={onCreateAction}
+                    onEditComment={onEditComment}
+                    onDeleteComment={onDeleteComment}
+                    onRemoveFromGroup={() => onRemoveCard(primaryCard?.id || '')}
+                    hasVoted={votedCards.has(primaryCard?.id || '')}
+                    currentUser={currentUser}
+                    inGroup={true}
+                  />
+                </div>
+                
+                {/* Group indicator badge */}
+                {cards.length > 1 && (
+                  <div className="absolute top-2 right-2 z-10">
+                    <AccordionTrigger className="bg-pornoretro-darkorange/80 text-white rounded-full p-1 h-8 w-8 hover:bg-pornoretro-orange flex items-center justify-center hover:no-underline">
+                      <Layers className="h-4 w-4" />
+                    </AccordionTrigger>
+                  </div>
+                )}
+                
+                {/* Remaining cards - expandable */}
+                {cards.length > 1 && (
+                  <AccordionContent className="pt-4">
+                    <div className="grid grid-cols-1 gap-4">
+                      {sortedCards.slice(1).map(card => (
+                        <RetroCard
+                          key={card.id}
+                          id={card.id}
+                          type={card.type}
+                          content={card.content}
+                          author={card.author}
+                          votes={card.votes}
+                          comments={card.comments}
+                          onVote={onVote}
+                          onAddComment={onAddComment}
+                          onCreateAction={onCreateAction}
+                          onEditComment={onEditComment}
+                          onDeleteComment={onDeleteComment}
+                          onRemoveFromGroup={() => onRemoveCard(card.id)}
+                          hasVoted={votedCards.has(card.id)}
+                          currentUser={currentUser}
+                          inGroup={true}
+                        />
+                      ))}
+                    </div>
+                  </AccordionContent>
+                )}
+              </div>
+            </AccordionItem>
+          </Accordion>
+        ) : (
+          <p className="text-muted-foreground">No cards in this group</p>
+        )}
       </CardContent>
       
       <CardFooter className="bg-secondary/10 px-4 py-2">

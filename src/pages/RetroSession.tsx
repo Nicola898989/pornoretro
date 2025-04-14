@@ -139,8 +139,10 @@ const RetroSession: React.FC = () => {
     loadRetro();
 
     return () => {
-      const channel = supabase.channel('schema-db-changes');
-      supabase.removeChannel(channel);
+      const channels = supabase.getChannels();
+      channels.forEach(channel => {
+        supabase.removeChannel(channel);
+      });
     };
   }, [id]);
 
@@ -198,7 +200,7 @@ const RetroSession: React.FC = () => {
         console.log('Realtime subscription status:', status);
       });
       
-    console.log('Realtime subscription set up with channel ID:', channel.id);
+    console.log('Realtime subscription set up with channel:', channel);
   };
 
   const fetchCards = async () => {
