@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useRetroSession } from '@/hooks/useRetroSession';
 import RetroColumns from '@/components/RetroColumns';
@@ -8,6 +7,7 @@ import Footer from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Flame, ThumbsDown, HeartHandshake } from 'lucide-react';
 import { RetroCardType } from '@/hooks/useRetroSession';
+import { CardType } from '@/components/RetroCard';
 
 export const RetroSession = () => {
   const [activeTab, setActiveTab] = useState("all");
