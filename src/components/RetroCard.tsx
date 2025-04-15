@@ -181,9 +181,6 @@ const RetroCard: React.FC<RetroCardProps> = ({
     >
       <CardHeader>
         <div className="flex justify-between items-start">
-          <CardTitle className="text-lg font-bold">
-            {cardTitles[type]}
-          </CardTitle>
           {inGroup && onRemoveFromGroup && (
             <Button 
               size="sm" 
@@ -195,10 +192,10 @@ const RetroCard: React.FC<RetroCardProps> = ({
               <LogOut className="w-3 h-3" />
             </Button>
           )}
+          <CardDescription>
+            Posted by {author}
+          </CardDescription>
         </div>
-        <CardDescription>
-          Posted by {author}
-        </CardDescription>
       </CardHeader>
       <CardContent className="text-md">
         {content}
