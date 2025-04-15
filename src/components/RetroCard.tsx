@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
@@ -109,7 +108,6 @@ const RetroCard: React.FC<RetroCardProps> = ({
     }
   };
 
-  // Drag and drop handling
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('card_id', id);
     e.dataTransfer.effectAllowed = 'move';
@@ -119,7 +117,6 @@ const RetroCard: React.FC<RetroCardProps> = ({
       e.currentTarget.style.opacity = '0.6';
     }
     
-    // Log the drag operation for debugging
     console.log(`Started dragging card: ${id}`);
   };
 
@@ -134,7 +131,6 @@ const RetroCard: React.FC<RetroCardProps> = ({
   };
 
   const handleDragOver = (e: React.DragEvent) => {
-    // Only process if this card can be a drop target
     if (inGroup || !onDrop) return;
     
     e.preventDefault();
@@ -152,7 +148,6 @@ const RetroCard: React.FC<RetroCardProps> = ({
   };
 
   const handleDrop = (e: React.DragEvent) => {
-    // Only process if this card can be a drop target
     if (inGroup || !onDrop) return;
     
     e.preventDefault();
@@ -208,42 +203,34 @@ const RetroCard: React.FC<RetroCardProps> = ({
       <CardContent className="text-md">
         {content}
       </CardContent>
-      <CardFooter className="flex flex-col gap-2">
-        <div className="flex justify-between items-center w-full">
-          <div className="flex items-center gap-3">
-            <span className="text-sm">{votes} vote{votes !== 1 ? 's' : ''}</span>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-              onClick={() => setShowComments(!showComments)}
-            >
-              <MessageCircle className="w-4 h-4" />
-              {comments.length} comment{comments.length !== 1 ? 's' : ''}
-            </Button>
-          </div>
+      <CardFooter className="flex flex-col gap-1 pt-2">
+        <div className="flex items-center justify-between w-full text-xs">
           <div className="flex items-center gap-2">
-            <Button 
-              size="sm" 
-              variant="outline"
-              className="text-xs"
+            <button
+              onClick={() => setShowComments(!showComments)}
+              className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <MessageCircle className="w-3 h-3" />
+              {comments.length}
+            </button>
+            <button
               onClick={() => onCreateAction(id)}
+              className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
             >
-              <PlusCircle className="w-3 h-3 mr-1" />
-              Create Action
-            </Button>
-            <Button 
-              size="sm" 
-              variant={hasVoted ? "default" : "outline"}
-              className={cn(
-                hasVoted ? "bg-pornoretro-orange text-pornoretro-black" : "border-pornoretro-orange text-pornoretro-orange"
-              )}
-              onClick={() => onVote(id)}
-            >
-              <ThumbsUp className="w-4 h-4 mr-1" />
-              {hasVoted ? "Remove Vote" : "Vote"}
-            </Button>
+              <PlusCircle className="w-3 h-3" />
+              Action
+            </button>
           </div>
+          <button 
+            className={cn(
+              "flex items-center gap-1 transition-colors",
+              hasVoted ? "text-pornoretro-orange" : "text-muted-foreground hover:text-pornoretro-orange"
+            )}
+            onClick={() => onVote(id)}
+          >
+            <ThumbsUp className="w-3 h-3" />
+            {votes}
+          </button>
         </div>
         
         {showComments && (
