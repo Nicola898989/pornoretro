@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useRetroSession } from '@/hooks/useRetroSession';
 import RetroColumns from '@/components/RetroColumns';
-import NewRetroCard from '@/components/NewRetroCard';
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -92,8 +91,6 @@ export const RetroSession = () => {
               )}
             </div>
 
-            <NewRetroCard onAddCard={handleNewCard} isSubmitting={isSubmitting} />
-
             <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
               <TabsList className="grid grid-cols-4 gap-2 bg-secondary/20">
                 <TabsTrigger value="all" className="data-[state=active]:bg-pornoretro-orange data-[state=active]:text-pornoretro-black">
@@ -123,6 +120,9 @@ export const RetroSession = () => {
                     onEditGroupTitle={handleEditGroupTitle}
                     votedCards={votedCards}
                     currentUser={username}
+                    onAddCard={handleNewCard}
+                    type="hot"
+                    isSubmitting={isSubmitting}
                   />
                   
                   <RetroColumns
@@ -142,6 +142,9 @@ export const RetroSession = () => {
                     onEditGroupTitle={handleEditGroupTitle}
                     votedCards={votedCards}
                     currentUser={username}
+                    onAddCard={handleNewCard}
+                    type="disappointment"
+                    isSubmitting={isSubmitting}
                   />
                   
                   <RetroColumns
@@ -161,6 +164,9 @@ export const RetroSession = () => {
                     onEditGroupTitle={handleEditGroupTitle}
                     votedCards={votedCards}
                     currentUser={username}
+                    onAddCard={handleNewCard}
+                    type="fantasy"
+                    isSubmitting={isSubmitting}
                   />
                 </div>
               </TabsContent>
@@ -184,6 +190,9 @@ export const RetroSession = () => {
                     onEditGroupTitle={handleEditGroupTitle}
                     votedCards={votedCards}
                     currentUser={username}
+                    onAddCard={handleNewCard}
+                    type="hot"
+                    isSubmitting={isSubmitting}
                   />
                 </div>
               </TabsContent>
@@ -207,6 +216,9 @@ export const RetroSession = () => {
                     onEditGroupTitle={handleEditGroupTitle}
                     votedCards={votedCards}
                     currentUser={username}
+                    onAddCard={handleNewCard}
+                    type="disappointment"
+                    isSubmitting={isSubmitting}
                   />
                 </div>
               </TabsContent>
@@ -230,6 +242,9 @@ export const RetroSession = () => {
                     onEditGroupTitle={handleEditGroupTitle}
                     votedCards={votedCards}
                     currentUser={username}
+                    onAddCard={handleNewCard}
+                    type="fantasy"
+                    isSubmitting={isSubmitting}
                   />
                 </div>
               </TabsContent>
