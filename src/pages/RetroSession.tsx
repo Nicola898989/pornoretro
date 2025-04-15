@@ -1,4 +1,60 @@
 
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { v4 as uuidv4 } from 'uuid';
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import RetroCard from "@/components/RetroCard";
+import RetroCardGroup from "@/components/RetroCardGroup";
+
+interface RetroData {
+  id: string;
+  name: string;
+  team: string;
+  created_by: string;
+  created_at: string;
+  is_anonymous?: boolean;
+}
+
+interface RetroCardType {
+  id: string;
+  type: 'hot' | 'disappointment' | 'fantasy';
+  content: string;
+  author: string;
+  votes: number;
+  comments: Array<{
+    id: string;
+    author: string;
+    content: string;
+    createdAt: string;
+  }>;
+  groupId?: string;
+}
+
+interface CardGroup {
+  id: string;
+  retro_id: string;
+  title: string;
+  created_at: string;
+}
+
+const RetroSession = () => {
+  const { id } = useParams<{ id: string }>();
+  const { toast } = useToast();
+  const [retroData, setRetroData] = useState<RetroData | null>(null);
+  const [cards, setCards] = useState<RetroCardType[]>([]);
+  const [cardGroups, setCardGroups] = useState<CardGroup[]>([]);
+  const [votedCards, setVotedCards] = useState<Set<string>>(new Set());
+  const [username, setUsername] = useState<string>("");
+
+  useEffect(() => {
+    if (id) {
+      fetchRetroData();
+      fetchCards();
+      fetchCardGroups();
+    }
+  }, [id]);
+
   const handleCreateGroup = async (cardId: string, targetCardId: string) => {
     if (!retroData) return;
     
@@ -118,3 +174,110 @@
       });
     }
   };
+
+  const fetchRetroData = async () => {
+    const { data, error } = await supabase
+      .from('retrospectives')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching retro data:', error);
+      toast({
+        title: "Error",
+        description: "Could not load retrospective data",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setRetroData(data);
+  };
+
+  const fetchCards = async () => {
+    if (!id) return;
+    
+    const { data, error } = await supabase
+      .from('retro_cards')
+      .select(`
+        *,
+        retro_comments(id, author, content, created_at),
+        retro_card_votes(id, user_id)
+      `)
+      .eq('retro_id', id);
+
+    if (error) {
+      console.error('Error fetching cards:', error);
+      toast({
+        title: "Error",
+        description: "Could not load retrospective cards",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Process the cards data to format it properly
+    const processedCards = data.map(card => {
+      const comments = (card.retro_comments || []).map(comment => ({
+        id: comment.id,
+        author: comment.author,
+        content: comment.content,
+        createdAt: comment.created_at
+      }));
+
+      // Count the votes
+      const votes = (card.retro_card_votes || []).length;
+      
+      // Check if the current user has voted for this card
+      const userVoted = card.retro_card_votes && card.retro_card_votes.some(vote => vote.user_id === username);
+      if (userVoted) {
+        setVotedCards(prev => new Set([...prev, card.id]));
+      }
+
+      return {
+        id: card.id,
+        type: card.type as 'hot' | 'disappointment' | 'fantasy',
+        content: card.content,
+        author: card.author,
+        votes,
+        comments,
+        groupId: card.group_id || undefined
+      };
+    });
+
+    setCards(processedCards);
+  };
+
+  const fetchCardGroups = async () => {
+    if (!id) return;
+    
+    const { data, error } = await supabase
+      .from('retro_card_groups')
+      .select('*')
+      .eq('retro_id', id);
+
+    if (error) {
+      console.error('Error fetching card groups:', error);
+      toast({
+        title: "Error",
+        description: "Could not load card groups",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCardGroups(data);
+  };
+
+  // Here would be the rest of the component with the render method
+  return (
+    <div>
+      <h1>Retro Session: {retroData?.name}</h1>
+      {/* Implementation of the component's UI would go here */}
+      <pre>{JSON.stringify({cards, cardGroups}, null, 2)}</pre>
+    </div>
+  );
+};
+
+export default RetroSession;
