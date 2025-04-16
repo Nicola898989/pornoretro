@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
@@ -350,23 +349,19 @@ export const useRetroSession = () => {
         return;
       }
       
-      // Se la card è già parte del gruppo target, non fare nulla
       if (card.groupId && card.groupId === targetCard.groupId) {
         console.log(`Card ${cardId} is already in the same group as ${targetCardId}`);
         return;
       }
       
-      // Se la card che stiamo spostando è già in un altro gruppo, prima la rimuoviamo da quel gruppo
       if (card.groupId && card.groupId !== targetCard.groupId) {
         console.log(`Removing card ${cardId} from previous group ${card.groupId}`);
         await handleRemoveCardFromGroup(cardId);
       }
       
-      // If target card is already in a group, add this card to that group
       if (targetCard.groupId) {
         console.log(`Adding card ${cardId} to existing group ${targetCard.groupId}`);
         
-        // Check if the card types match
         const existingGroupCards = cards.filter(c => c.groupId === targetCard.groupId);
         if (existingGroupCards.some(c => c.type !== card.type)) {
           toast({
@@ -391,9 +386,7 @@ export const useRetroSession = () => {
         
         await fetchCards();
       } 
-      // If neither card is in a group, create a new one
       else {
-        // Check if the card types match
         if (card.type !== targetCard.type) {
           toast({
             title: "Error",
@@ -416,7 +409,6 @@ export const useRetroSession = () => {
           
         if (groupError) throw groupError;
         
-        // Update both cards with the new group ID
         const { error: cardsError } = await supabase
           .from('retro_cards')
           .update({ group_id: newGroupId })
@@ -495,7 +487,15 @@ export const useRetroSession = () => {
 
   const handleEditCard = async (cardId: string, newContent: string) => {
     try {
-      // Aggiorna localmente la carta immediatamente per feedback immediato all'utente
+      const currentCard = cards.find(card => card.id === cardId);
+      if (!currentCard || currentCard.content === newContent.trim()) {
+        toast({
+          title: "Nessun cambiamento",
+          description: "Il contenuto della card non è stato modificato",
+        });
+        return;
+      }
+      
       setCards(prevCards => 
         prevCards.map(card => 
           card.id === cardId 
@@ -504,14 +504,12 @@ export const useRetroSession = () => {
         )
       );
 
-      // Poi invia l'aggiornamento al database
       const { error } = await supabase
         .from('retro_cards')
         .update({ content: newContent.trim() })
         .eq('id', cardId);
 
       if (error) {
-        // Se c'è un errore, ripristina lo stato precedente
         await fetchCards();
         throw error;
       }

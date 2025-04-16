@@ -181,7 +181,7 @@ const RetroCard: React.FC<RetroCardProps> = ({
   };
   
   const handleEditSave = () => {
-    if (onEdit && editedContent.trim() !== content) {
+    if (onEdit) {
       onEdit(id, editedContent.trim());
       setIsEditing(false);
     }
@@ -293,7 +293,7 @@ const RetroCard: React.FC<RetroCardProps> = ({
                 size="sm"
                 onClick={handleEditSave}
                 className="bg-pornoretro-orange text-pornoretro-black hover:bg-pornoretro-darkorange"
-                disabled={!editedContent.trim() || editedContent.trim() === content}
+                disabled={!editedContent.trim()}
               >
                 <Check className="w-3 h-3 mr-1" />
                 Save
