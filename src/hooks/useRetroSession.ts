@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
@@ -494,19 +495,32 @@ export const useRetroSession = () => {
 
   const handleEditCard = async (cardId: string, newContent: string) => {
     try {
+      // Aggiorna localmente la carta immediatamente per feedback immediato all'utente
+      setCards(prevCards => 
+        prevCards.map(card => 
+          card.id === cardId 
+            ? { ...card, content: newContent.trim() } 
+            : card
+        )
+      );
+
+      // Poi invia l'aggiornamento al database
       const { error } = await supabase
         .from('retro_cards')
         .update({ content: newContent.trim() })
         .eq('id', cardId);
 
-      if (error) throw error;
+      if (error) {
+        // Se c'è un errore, ripristina lo stato precedente
+        await fetchCards();
+        throw error;
+      }
 
       toast({
         title: "Card aggiornata",
         description: "Il contenuto della card è stato aggiornato",
       });
 
-      fetchCards();
     } catch (error) {
       console.error("Error updating card:", error);
       toast({

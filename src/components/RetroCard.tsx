@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { ThumbsUp, MessageCircle, PlusCircle, Pencil, Trash, Check, X, LogOut } from 'lucide-react';
@@ -183,14 +183,18 @@ const RetroCard: React.FC<RetroCardProps> = ({
   const handleEditSave = () => {
     if (onEdit && editedContent.trim() !== content) {
       onEdit(id, editedContent.trim());
+      setIsEditing(false);
     }
-    setIsEditing(false);
   };
 
   const handleEditCancel = () => {
     setEditedContent(content);
     setIsEditing(false);
   };
+
+  React.useEffect(() => {
+    setEditedContent(content);
+  }, [content]);
 
   const isAuthor = currentUser === author || author === 'Anonymous';
 
