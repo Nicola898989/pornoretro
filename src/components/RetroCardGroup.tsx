@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import RetroCard, { CardType, Comment } from './RetroCard';
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -37,6 +36,8 @@ interface RetroCardGroupProps {
   votedCards: Set<string>;
   currentUser?: string;
   onAddToGroup?: (cardId: string, groupId: string) => void;
+  onEdit?: (cardId: string, newContent: string) => void;
+  onDelete?: (cardId: string) => void;
 }
 
 const RetroCardGroup: React.FC<RetroCardGroupProps> = ({
@@ -52,7 +53,9 @@ const RetroCardGroup: React.FC<RetroCardGroupProps> = ({
   onEditTitle,
   votedCards,
   currentUser,
-  onAddToGroup
+  onAddToGroup,
+  onEdit,
+  onDelete
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [newTitle, setNewTitle] = useState(title);

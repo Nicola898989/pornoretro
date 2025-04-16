@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useRetroSession } from '@/hooks/useRetroSession';
 import RetroColumns from '@/components/RetroColumns';
@@ -26,6 +27,8 @@ export const RetroSession = () => {
     handleCreateGroup,
     handleRemoveCardFromGroup,
     handleEditGroupTitle,
+    handleEditCard,
+    handleDeleteCard,
   } = useRetroSession();
 
   // Group cards by type
@@ -123,6 +126,8 @@ export const RetroSession = () => {
                     onAddCard={handleNewCard}
                     type="hot"
                     isSubmitting={isSubmitting}
+                    onEditCard={handleEditCard}
+                    onDeleteCard={handleDeleteCard}
                   />
                   
                   <RetroColumns
@@ -145,6 +150,8 @@ export const RetroSession = () => {
                     onAddCard={handleNewCard}
                     type="disappointment"
                     isSubmitting={isSubmitting}
+                    onEditCard={handleEditCard}
+                    onDeleteCard={handleDeleteCard}
                   />
                   
                   <RetroColumns
@@ -167,6 +174,8 @@ export const RetroSession = () => {
                     onAddCard={handleNewCard}
                     type="fantasy"
                     isSubmitting={isSubmitting}
+                    onEditCard={handleEditCard}
+                    onDeleteCard={handleDeleteCard}
                   />
                 </div>
               </TabsContent>
@@ -193,6 +202,8 @@ export const RetroSession = () => {
                     onAddCard={handleNewCard}
                     type="hot"
                     isSubmitting={isSubmitting}
+                    onEditCard={handleEditCard}
+                    onDeleteCard={handleDeleteCard}
                   />
                 </div>
               </TabsContent>
@@ -219,6 +230,8 @@ export const RetroSession = () => {
                     onAddCard={handleNewCard}
                     type="disappointment"
                     isSubmitting={isSubmitting}
+                    onEditCard={handleEditCard}
+                    onDeleteCard={handleDeleteCard}
                   />
                 </div>
               </TabsContent>
@@ -245,6 +258,8 @@ export const RetroSession = () => {
                     onAddCard={handleNewCard}
                     type="fantasy"
                     isSubmitting={isSubmitting}
+                    onEditCard={handleEditCard}
+                    onDeleteCard={handleDeleteCard}
                   />
                 </div>
               </TabsContent>
