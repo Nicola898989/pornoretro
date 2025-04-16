@@ -492,6 +492,56 @@ export const useRetroSession = () => {
     }
   };
 
+  const handleEditCard = async (cardId: string, newContent: string) => {
+    try {
+      const { error } = await supabase
+        .from('retro_cards')
+        .update({ content: newContent.trim() })
+        .eq('id', cardId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Card aggiornata",
+        description: "Il contenuto della card è stato aggiornato",
+      });
+
+      fetchCards();
+    } catch (error) {
+      console.error("Error updating card:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile aggiornare la card. Riprova più tardi.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteCard = async (cardId: string) => {
+    try {
+      const { error } = await supabase
+        .from('retro_cards')
+        .delete()
+        .eq('id', cardId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Card eliminata",
+        description: "La card è stata eliminata con successo",
+      });
+
+      fetchCards();
+    } catch (error) {
+      console.error("Error deleting card:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare la card. Riprova più tardi.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return {
     retroData,
     cards,
@@ -507,5 +557,7 @@ export const useRetroSession = () => {
     handleCreateGroup,
     handleRemoveCardFromGroup,
     handleEditGroupTitle,
+    handleEditCard,
+    handleDeleteCard,
   };
 };

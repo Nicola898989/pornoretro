@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import RetroCard from './RetroCard';
 import RetroCardGroup from './RetroCardGroup';
@@ -35,6 +34,8 @@ interface RetroColumnProps {
   onAddCard: (content: string, type: CardType) => void;
   type: CardType;
   isSubmitting?: boolean;
+  onEditCard: (cardId: string, content: string) => void;
+  onDeleteCard: (cardId: string) => void;
 }
 
 const RetroColumns: React.FC<RetroColumnProps> = ({
@@ -57,6 +58,8 @@ const RetroColumns: React.FC<RetroColumnProps> = ({
   onAddCard,
   type,
   isSubmitting,
+  onEditCard,
+  onDeleteCard,
 }) => {
   const [newCardContent, setNewCardContent] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -69,12 +72,8 @@ const RetroColumns: React.FC<RetroColumnProps> = ({
     }
   };
 
-  // Funzione per gestire l'aggiunta di una card a un gruppo esistente
   const handleAddToGroup = (cardId: string, groupId: string) => {
-    // Utilizziamo la stessa funzione di onDrop, ma prendendo una card fittizia dal gruppo
-    // per simulare il drag and drop di una card su un'altra
     if (onDrop) {
-      // Trova una card qualsiasi nel gruppo come target
       const groupCards = groups.find(g => g.group.id === groupId)?.cards;
       if (groupCards && groupCards.length > 0) {
         onDrop(cardId, groupCards[0].id);
@@ -126,7 +125,6 @@ const RetroColumns: React.FC<RetroColumnProps> = ({
         </Dialog>
       </div>
       
-      {/* Groups */}
       {groups.map(({group, cards}) => (
         <RetroCardGroup
           key={group.id}
@@ -143,10 +141,11 @@ const RetroColumns: React.FC<RetroColumnProps> = ({
           votedCards={votedCards}
           currentUser={currentUser}
           onAddToGroup={handleAddToGroup}
+          onEdit={onEditCard}
+          onDelete={onDeleteCard}
         />
       ))}
       
-      {/* Individual Cards */}
       {cards.map(card => (
         <RetroCard
           key={card.id}
@@ -164,6 +163,8 @@ const RetroColumns: React.FC<RetroColumnProps> = ({
           onDrop={onDrop}
           hasVoted={votedCards.has(card.id)}
           currentUser={currentUser}
+          onEdit={onEditCard}
+          onDelete={onDeleteCard}
         />
       ))}
       

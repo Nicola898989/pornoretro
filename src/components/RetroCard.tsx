@@ -11,6 +11,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export type CardType = 'hot' | 'disappointment' | 'fantasy';
 
@@ -38,6 +49,8 @@ interface RetroCardProps {
   hasVoted: boolean;
   currentUser?: string;
   inGroup?: boolean;
+  onEdit?: (id: string, newContent: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 const cardStyles = {
@@ -68,12 +81,16 @@ const RetroCard: React.FC<RetroCardProps> = ({
   onRemoveFromGroup,
   hasVoted,
   currentUser = '',
-  inGroup = false 
+  inGroup = false,
+  onEdit,
+  onDelete,
 }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState(content);
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [editingComment, setEditingComment] = useState<string | null>(null);
-  const [editedContent, setEditedContent] = useState('');
+  const [editedContentComment, setEditedContentComment] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   
   const handleSubmitComment = (e: React.FormEvent) => {
@@ -86,19 +103,19 @@ const RetroCard: React.FC<RetroCardProps> = ({
   
   const startEditComment = (commentId: string, content: string) => {
     setEditingComment(commentId);
-    setEditedContent(content);
+    setEditedContentComment(content);
   };
   
   const cancelEditComment = () => {
     setEditingComment(null);
-    setEditedContent('');
+    setEditedContentComment('');
   };
   
   const saveEditComment = (commentId: string) => {
-    if (onEditComment && editedContent.trim()) {
-      onEditComment(id, commentId, editedContent.trim());
+    if (onEditComment && editedContentComment.trim()) {
+      onEditComment(id, commentId, editedContentComment.trim());
       setEditingComment(null);
-      setEditedContent('');
+      setEditedContentComment('');
     }
   };
   
@@ -163,6 +180,20 @@ const RetroCard: React.FC<RetroCardProps> = ({
     }
   };
   
+  const handleEditSave = () => {
+    if (onEdit && editedContent.trim() !== content) {
+      onEdit(id, editedContent.trim());
+    }
+    setIsEditing(false);
+  };
+
+  const handleEditCancel = () => {
+    setEditedContent(content);
+    setIsEditing(false);
+  };
+
+  const isAuthor = currentUser === author || author === 'Anonymous';
+
   return (
     <Card 
       className={cn(
@@ -172,7 +203,7 @@ const RetroCard: React.FC<RetroCardProps> = ({
         inGroup ? "border-opacity-70" : "",
         "hover:border-opacity-100"
       )}
-      draggable={!inGroup}
+      draggable={!inGroup && !isEditing}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragOver={handleDragOver}
@@ -192,13 +223,82 @@ const RetroCard: React.FC<RetroCardProps> = ({
               <LogOut className="w-3 h-3" />
             </Button>
           )}
-          <CardDescription>
+          <CardDescription className="flex items-center gap-2">
             Posted by {author}
+            {isAuthor && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                    <span className="sr-only">Open menu</span>
+                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4">
+                      <path d="M3.625 7.5C3.625 8.12132 3.12132 8.625 2.5 8.625C1.87868 8.625 1.375 8.12132 1.375 7.5C1.375 6.87868 1.87868 6.375 2.5 6.375C3.12132 6.375 3.625 6.87868 3.625 7.5ZM8.625 7.5C8.625 8.12132 8.12132 8.625 7.5 8.625C6.87868 8.625 6.375 8.12132 6.375 7.5C6.375 6.87868 6.87868 6.375 7.5 6.375C8.12132 6.375 8.625 6.87868 8.625 7.5ZM13.625 7.5C13.625 8.12132 13.1213 8.625 12.5 8.625C11.8787 8.625 11.375 8.12132 11.375 7.5C11.375 6.87868 11.8787 6.375 12.5 6.375C13.1213 6.375 13.625 6.87868 13.625 7.5Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+                    </svg>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        <Trash className="w-4 h-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete your card.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => onDelete?.(id)}>
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </CardDescription>
         </div>
       </CardHeader>
       <CardContent className="text-md">
-        {content}
+        {isEditing ? (
+          <div className="space-y-2">
+            <Textarea
+              value={editedContent}
+              onChange={(e) => setEditedContent(e.target.value)}
+              className="min-h-[60px] bg-secondary/50"
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleEditCancel}
+              >
+                <X className="w-3 h-3 mr-1" />
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleEditSave}
+                className="bg-pornoretro-orange text-pornoretro-black hover:bg-pornoretro-darkorange"
+                disabled={!editedContent.trim() || editedContent.trim() === content}
+              >
+                <Check className="w-3 h-3 mr-1" />
+                Save
+              </Button>
+            </div>
+          </div>
+        ) : (
+          content
+        )}
       </CardContent>
       <CardFooter className="flex flex-col gap-1 pt-2">
         <div className="flex items-center justify-between w-full text-xs">
@@ -247,8 +347,8 @@ const RetroCard: React.FC<RetroCardProps> = ({
                           </p>
                         </div>
                         <Textarea
-                          value={editedContent}
-                          onChange={(e) => setEditedContent(e.target.value)}
+                          value={editedContentComment}
+                          onChange={(e) => setEditedContentComment(e.target.value)}
                           className="min-h-[60px] bg-secondary/50 text-sm"
                         />
                         <div className="flex justify-end gap-2">
