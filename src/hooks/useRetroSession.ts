@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
@@ -350,6 +349,18 @@ export const useRetroSession = () => {
         return;
       }
       
+      // Se la card è già parte del gruppo target, non fare nulla
+      if (card.groupId && card.groupId === targetCard.groupId) {
+        console.log(`Card ${cardId} is already in the same group as ${targetCardId}`);
+        return;
+      }
+      
+      // Se la card che stiamo spostando è già in un altro gruppo, prima la rimuoviamo da quel gruppo
+      if (card.groupId && card.groupId !== targetCard.groupId) {
+        console.log(`Removing card ${cardId} from previous group ${card.groupId}`);
+        await handleRemoveCardFromGroup(cardId);
+      }
+      
       // If target card is already in a group, add this card to that group
       if (targetCard.groupId) {
         console.log(`Adding card ${cardId} to existing group ${targetCard.groupId}`);
@@ -498,4 +509,3 @@ export const useRetroSession = () => {
     handleEditGroupTitle,
   };
 };
-

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import RetroCard, { CardType, Comment } from './RetroCard';
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -35,6 +36,7 @@ interface RetroCardGroupProps {
   onEditTitle: (groupId: string, newTitle: string) => void;
   votedCards: Set<string>;
   currentUser?: string;
+  onAddToGroup?: (cardId: string, groupId: string) => void;
 }
 
 const RetroCardGroup: React.FC<RetroCardGroupProps> = ({
@@ -49,7 +51,8 @@ const RetroCardGroup: React.FC<RetroCardGroupProps> = ({
   onRemoveCard,
   onEditTitle,
   votedCards,
-  currentUser
+  currentUser,
+  onAddToGroup
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [newTitle, setNewTitle] = useState(title);
@@ -83,8 +86,9 @@ const RetroCardGroup: React.FC<RetroCardGroupProps> = ({
     setIsDropTarget(false);
     
     const cardId = e.dataTransfer.getData('card_id');
-    if (cardId) {
+    if (cardId && onAddToGroup) {
       console.log(`Card dropped into group: ${cardId} into group ${id}`);
+      onAddToGroup(cardId, id);
     }
   };
 
