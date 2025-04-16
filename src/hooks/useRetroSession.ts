@@ -334,7 +334,7 @@ export const useRetroSession = () => {
   const handleCreateGroup = async (cardId: string, targetCardId: string) => {
     if (!retroData) return;
     
-    console.log(`Creating group with cards: ${cardId} and ${targetCardId}`);
+    console.log(`Creating or updating group with cards: ${cardId} and ${targetCardId}`);
     
     try {
       const card = cards.find(c => c.id === cardId);
@@ -350,8 +350,20 @@ export const useRetroSession = () => {
         return;
       }
       
+      // If target card is already in a group, add this card to that group
       if (targetCard.groupId) {
         console.log(`Adding card ${cardId} to existing group ${targetCard.groupId}`);
+        
+        // Check if the card types match
+        const existingGroupCards = cards.filter(c => c.groupId === targetCard.groupId);
+        if (existingGroupCards.some(c => c.type !== card.type)) {
+          toast({
+            title: "Error",
+            description: "Puoi raggruppare solo cards dello stesso tipo",
+            variant: "destructive",
+          });
+          return;
+        }
         
         const { error } = await supabase
           .from('retro_cards')
@@ -361,13 +373,24 @@ export const useRetroSession = () => {
         if (error) throw error;
         
         toast({
-          title: "Cards grouped",
-          description: "The card has been added to the existing group",
+          title: "Card aggiunta al gruppo",
+          description: `Il gruppo contiene ora ${existingGroupCards.length + 1} cards`,
         });
         
         await fetchCards();
       } 
+      // If neither card is in a group, create a new one
       else {
+        // Check if the card types match
+        if (card.type !== targetCard.type) {
+          toast({
+            title: "Error",
+            description: "Puoi raggruppare solo cards dello stesso tipo",
+            variant: "destructive",
+          });
+          return;
+        }
+
         const newGroupId = uuidv4();
         const groupTitle = `${card.type.charAt(0).toUpperCase() + card.type.slice(1)} Group`;
         
@@ -381,23 +404,17 @@ export const useRetroSession = () => {
           
         if (groupError) throw groupError;
         
-        const { error: card1Error } = await supabase
+        // Update both cards with the new group ID
+        const { error: cardsError } = await supabase
           .from('retro_cards')
           .update({ group_id: newGroupId })
-          .eq('id', cardId);
+          .in('id', [cardId, targetCardId]);
           
-        if (card1Error) throw card1Error;
-        
-        const { error: card2Error } = await supabase
-          .from('retro_cards')
-          .update({ group_id: newGroupId })
-          .eq('id', targetCardId);
-          
-        if (card2Error) throw card2Error;
+        if (cardsError) throw cardsError;
         
         toast({
-          title: "New group created",
-          description: "Cards have been grouped together",
+          title: "Nuovo gruppo creato",
+          description: "Le cards sono state raggruppate insieme",
         });
         
         await fetchCards();
@@ -481,3 +498,4 @@ export const useRetroSession = () => {
     handleEditGroupTitle,
   };
 };
+
