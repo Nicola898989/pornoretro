@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { ThumbsUp, MessageCircle, PlusCircle, Pencil, Trash, Check, X, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
@@ -57,12 +56,6 @@ const cardStyles = {
   hot: "border-green-500 bg-gradient-to-br from-pornoretro-black to-green-950",
   disappointment: "border-red-500 bg-gradient-to-br from-pornoretro-black to-red-950",
   fantasy: "border-pornoretro-orange bg-gradient-to-br from-pornoretro-black to-pornoretro-darkorange/30"
-};
-
-const cardTitles = {
-  hot: "Hot Moment",
-  disappointment: "Disappointment",
-  fantasy: "Team Fantasy"
 };
 
 const RetroCard: React.FC<RetroCardProps> = ({ 

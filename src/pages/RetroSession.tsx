@@ -5,23 +5,34 @@ import RetroColumns from '@/components/RetroColumns';
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Flame, ThumbsDown, HeartHandshake } from 'lucide-react';
+import { Flame, ThumbsDown, HeartHandshake, ClipboardCheck, Share2 } from 'lucide-react';
 import { RetroCardType } from '@/hooks/useRetroSession';
 import { CardType } from '@/components/RetroCard';
+import ActionList from '@/components/ActionList';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 
 export const RetroSession = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showActionDialog, setShowActionDialog] = useState(false);
+  const [selectedCardId, setSelectedCardId] = useState<string | undefined>(undefined);
+  const { toast } = useToast();
+
   const {
     retroData,
     cards,
     cardGroups,
     votedCards,
     username,
+    actionItems,
     handleAddCard,
     handleVote,
     handleAddComment,
     handleCreateAction,
+    handleToggleActionComplete,
+    handleDeleteAction,
     handleEditComment,
     handleDeleteComment,
     handleCreateGroup,
@@ -77,6 +88,40 @@ export const RetroSession = () => {
     setIsSubmitting(false);
   };
 
+  const handleCardAction = (cardId: string) => {
+    setSelectedCardId(cardId);
+    setShowActionDialog(true);
+  };
+
+  const handleShareRetro = () => {
+    if (!retroData) return;
+    
+    const url = `${window.location.origin}/join?retro=${retroData.id}`;
+    
+    // Try to use the Clipboard API
+    try {
+      navigator.clipboard.writeText(url).then(() => {
+        toast({
+          title: "Link copiato negli appunti",
+          description: "Puoi condividere il link con il tuo team"
+        });
+      });
+    } catch (err) {
+      // Fallback for browsers that don't support clipboard API
+      const textarea = document.createElement('textarea');
+      textarea.value = url;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      
+      toast({
+        title: "Link copiato negli appunti",
+        description: "Puoi condividere il link con il tuo team"
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-pornoretro-black">
       <Header />
@@ -84,24 +129,61 @@ export const RetroSession = () => {
       <main className="flex-grow container mx-auto py-8 px-4">
         {retroData ? (
           <div className="space-y-8">
-            <div className="text-center space-y-2">
-              <h1 className="text-4xl font-bold text-pornoretro-orange">{retroData.name}</h1>
-              <p className="text-xl text-white/75">Team: {retroData.team}</p>
-              {retroData.is_anonymous && (
-                <span className="inline-block bg-pornoretro-darkorange/40 text-pornoretro-orange px-3 py-1 rounded-full text-sm">
-                  Feedback anonimo
-                </span>
-              )}
+            <div className="flex justify-between items-center">
+              <div className="text-center space-y-2">
+                <h1 className="text-4xl font-bold text-pornoretro-orange">{retroData.name}</h1>
+                <p className="text-xl text-white/75">Team: {retroData.team}</p>
+                {retroData.is_anonymous && (
+                  <span className="inline-block bg-pornoretro-darkorange/40 text-pornoretro-orange px-3 py-1 rounded-full text-sm">
+                    Feedback anonimo
+                  </span>
+                )}
+              </div>
+              
+              <div className="flex space-x-3">
+                <Dialog open={showActionDialog} onOpenChange={setShowActionDialog}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      className="bg-pornoretro-orange text-pornoretro-black hover:bg-pornoretro-darkorange flex"
+                    >
+                      <ClipboardCheck className="mr-2 h-4 w-4" />
+                      Action Items
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-pornoretro-black border-pornoretro-orange/30 max-w-xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle className="text-pornoretro-orange">Action Items</DialogTitle>
+                    </DialogHeader>
+                    <ActionList
+                      actionItems={actionItems}
+                      onToggleComplete={handleToggleActionComplete}
+                      onDelete={handleDeleteAction}
+                      onAdd={handleCreateAction}
+                      cards={cards}
+                      selectedCardId={selectedCardId}
+                    />
+                  </DialogContent>
+                </Dialog>
+                
+                <Button 
+                  className="bg-pornoretro-orange text-pornoretro-black hover:bg-pornoretro-darkorange flex"
+                  onClick={handleShareRetro}
+                >
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Condividi
+                </Button>
+              </div>
             </div>
 
             <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
-              <TabsList className="grid grid-cols-4 gap-2 bg-secondary/20">
+              <TabsList className="grid grid-cols-5 gap-2 bg-secondary/20">
                 <TabsTrigger value="all" className="data-[state=active]:bg-pornoretro-orange data-[state=active]:text-pornoretro-black">
                   Tutte
                 </TabsTrigger>
                 <TabsTrigger value="hot" className="data-[state=active]:bg-green-600">Hot Moments</TabsTrigger>
                 <TabsTrigger value="disappointment" className="data-[state=active]:bg-red-600">Disappointments</TabsTrigger>
                 <TabsTrigger value="fantasy" className="data-[state=active]:bg-pornoretro-orange">Team Fantasy</TabsTrigger>
+                <TabsTrigger value="actions" className="data-[state=active]:bg-blue-600">Action Items</TabsTrigger>
               </TabsList>
 
               <TabsContent value="all" className="mt-6">
@@ -115,7 +197,7 @@ export const RetroSession = () => {
                     groups={hotGroups}
                     onVote={handleVote}
                     onAddComment={handleAddComment}
-                    onCreateAction={handleCreateAction}
+                    onCreateAction={handleCardAction}
                     onEditComment={handleEditComment}
                     onDeleteComment={handleDeleteComment}
                     onDrop={handleCreateGroup}
@@ -139,7 +221,7 @@ export const RetroSession = () => {
                     groups={disappointmentGroups}
                     onVote={handleVote}
                     onAddComment={handleAddComment}
-                    onCreateAction={handleCreateAction}
+                    onCreateAction={handleCardAction}
                     onEditComment={handleEditComment}
                     onDeleteComment={handleDeleteComment}
                     onDrop={handleCreateGroup}
@@ -163,7 +245,7 @@ export const RetroSession = () => {
                     groups={fantasyGroups}
                     onVote={handleVote}
                     onAddComment={handleAddComment}
-                    onCreateAction={handleCreateAction}
+                    onCreateAction={handleCardAction}
                     onEditComment={handleEditComment}
                     onDeleteComment={handleDeleteComment}
                     onDrop={handleCreateGroup}
@@ -191,7 +273,7 @@ export const RetroSession = () => {
                     groups={hotGroups}
                     onVote={handleVote}
                     onAddComment={handleAddComment}
-                    onCreateAction={handleCreateAction}
+                    onCreateAction={handleCardAction}
                     onEditComment={handleEditComment}
                     onDeleteComment={handleDeleteComment}
                     onDrop={handleCreateGroup}
@@ -219,7 +301,7 @@ export const RetroSession = () => {
                     groups={disappointmentGroups}
                     onVote={handleVote}
                     onAddComment={handleAddComment}
-                    onCreateAction={handleCreateAction}
+                    onCreateAction={handleCardAction}
                     onEditComment={handleEditComment}
                     onDeleteComment={handleDeleteComment}
                     onDrop={handleCreateGroup}
@@ -247,7 +329,7 @@ export const RetroSession = () => {
                     groups={fantasyGroups}
                     onVote={handleVote}
                     onAddComment={handleAddComment}
-                    onCreateAction={handleCreateAction}
+                    onCreateAction={handleCardAction}
                     onEditComment={handleEditComment}
                     onDeleteComment={handleDeleteComment}
                     onDrop={handleCreateGroup}
@@ -260,6 +342,18 @@ export const RetroSession = () => {
                     isSubmitting={isSubmitting}
                     onEditCard={handleEditCard}
                     onDeleteCard={handleDeleteCard}
+                  />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="actions" className="mt-6">
+                <div className="max-w-2xl mx-auto">
+                  <ActionList
+                    actionItems={actionItems}
+                    onToggleComplete={handleToggleActionComplete}
+                    onDelete={handleDeleteAction}
+                    onAdd={handleCreateAction}
+                    cards={cards}
                   />
                 </div>
               </TabsContent>

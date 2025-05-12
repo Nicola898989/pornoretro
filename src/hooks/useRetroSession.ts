@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { v4 as uuidv4 } from 'uuid';
 import { CardType } from '@/components/RetroCard';
+import { ActionItemType } from '@/components/ActionItem';
 
 export interface RetroData {
   id: string;
@@ -44,6 +45,7 @@ export const useRetroSession = () => {
   const [cardGroups, setCardGroups] = useState<CardGroup[]>([]);
   const [votedCards, setVotedCards] = useState<Set<string>>(new Set());
   const [username, setUsername] = useState<string>("");
+  const [actionItems, setActionItems] = useState<ActionItemType[]>([]);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('currentUser');
@@ -55,6 +57,7 @@ export const useRetroSession = () => {
       fetchRetroData();
       fetchCards();
       fetchCardGroups();
+      fetchActionItems();
     }
   }, [id]);
 
@@ -148,6 +151,27 @@ export const useRetroSession = () => {
     }
 
     setCardGroups(data);
+  };
+
+  const fetchActionItems = async () => {
+    if (!id) return;
+    
+    const { data, error } = await supabase
+      .from('retro_actions')
+      .select('*')
+      .eq('retro_id', id);
+
+    if (error) {
+      console.error('Error fetching action items:', error);
+      toast({
+        title: "Error",
+        description: "Could not load action items",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setActionItems(data as ActionItemType[]);
   };
 
   const handleAddCard = async (content: string, type: CardType) => {
@@ -271,11 +295,114 @@ export const useRetroSession = () => {
     }
   };
 
-  const handleCreateAction = async (cardId: string) => {
-    toast({
-      title: "Feature in sviluppo",
-      description: "La creazione di azioni sarà implementata presto",
-    });
+  const handleCreateAction = async (text: string, assignee: string, cardId?: string) => {
+    if (!id || !text.trim()) {
+      toast({
+        title: "Error",
+        description: "Cannot create empty action",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      let linkedCardContent;
+      let linkedCardType;
+      
+      if (cardId) {
+        const linkedCard = cards.find(card => card.id === cardId);
+        if (linkedCard) {
+          linkedCardContent = linkedCard.content;
+          linkedCardType = linkedCard.type;
+        }
+      }
+
+      const { error } = await supabase
+        .from('retro_actions')
+        .insert({
+          retro_id: id,
+          text: text.trim(),
+          assignee: assignee.trim() || null,
+          linked_card_id: cardId || null,
+          linked_card_content: linkedCardContent || null,
+          linked_card_type: linkedCardType || null,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Action created",
+        description: "New action item has been created",
+      });
+
+      fetchActionItems();
+    } catch (error) {
+      console.error("Error creating action:", error);
+      toast({
+        title: "Error",
+        description: "Could not create action item. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleToggleActionComplete = async (actionId: string) => {
+    try {
+      const actionToUpdate = actionItems.find(action => action.id === actionId);
+      if (!actionToUpdate) return;
+
+      const { error } = await supabase
+        .from('retro_actions')
+        .update({ completed: !actionToUpdate.completed })
+        .eq('id', actionId);
+
+      if (error) throw error;
+
+      setActionItems(prevItems => 
+        prevItems.map(item => 
+          item.id === actionId 
+            ? { ...item, completed: !item.completed } 
+            : item
+        )
+      );
+
+      toast({
+        title: `Action ${!actionToUpdate.completed ? "completed" : "reopened"}`,
+        description: `The action item has been marked as ${!actionToUpdate.completed ? "completed" : "in progress"}`,
+      });
+    } catch (error) {
+      console.error("Error toggling action completion:", error);
+      toast({
+        title: "Error",
+        description: "Could not update action status. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteAction = async (actionId: string) => {
+    try {
+      const { error } = await supabase
+        .from('retro_actions')
+        .delete()
+        .eq('id', actionId);
+
+      if (error) throw error;
+
+      setActionItems(prevItems => prevItems.filter(item => item.id !== actionId));
+
+      toast({
+        title: "Action deleted",
+        description: "The action item has been deleted",
+      });
+    } catch (error) {
+      console.error("Error deleting action:", error);
+      toast({
+        title: "Error",
+        description: "Could not delete action item. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEditComment = async (cardId: string, commentId: string, newContent: string) => {
@@ -560,10 +687,13 @@ export const useRetroSession = () => {
     cardGroups,
     votedCards,
     username,
+    actionItems,
     handleAddCard,
     handleVote,
     handleAddComment,
     handleCreateAction,
+    handleToggleActionComplete,
+    handleDeleteAction,
     handleEditComment,
     handleDeleteComment,
     handleCreateGroup,
