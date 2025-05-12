@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
@@ -520,7 +519,8 @@ export const useRetroSession = () => {
         description: "New action item has been created",
       });
 
-      fetchActionItems();
+      // Remove fetchActionItems() - the real-time subscription will handle updating the UI
+      // This prevents duplicate action items from appearing
     } catch (error) {
       console.error("Error creating action:", error);
       toast({
@@ -543,6 +543,9 @@ export const useRetroSession = () => {
 
       if (error) throw error;
 
+      // Let the real-time subscription handle the update in the UI
+      // Remove the following local state update to prevent duplicates
+      /* 
       setActionItems(prevItems => 
         prevItems.map(item => 
           item.id === actionId 
@@ -550,6 +553,7 @@ export const useRetroSession = () => {
             : item
         )
       );
+      */
 
       toast({
         title: `Action ${!actionToUpdate.completed ? "completed" : "reopened"}`,
@@ -574,7 +578,11 @@ export const useRetroSession = () => {
 
       if (error) throw error;
 
+      // Let the real-time subscription handle the update in the UI
+      // Remove the following local state update to prevent duplicates
+      /*
       setActionItems(prevItems => prevItems.filter(item => item.id !== actionId));
+      */
 
       toast({
         title: "Action deleted",
