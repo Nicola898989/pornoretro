@@ -1,23 +1,25 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRetroSession } from '@/hooks/useRetroSession';
 import RetroColumns from '@/components/RetroColumns';
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Flame, ThumbsDown, HeartHandshake, ClipboardCheck, Share2 } from 'lucide-react';
+import { Flame, ThumbsDown, HeartHandshake, ClipboardCheck, Share2, Users } from 'lucide-react';
 import { RetroCardType } from '@/hooks/useRetroSession';
 import { CardType } from '@/components/RetroCard';
 import ActionList from '@/components/ActionList';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from "@/integrations/supabase/client";
 
 export const RetroSession = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showActionDialog, setShowActionDialog] = useState(false);
   const [selectedCardId, setSelectedCardId] = useState<string | undefined>(undefined);
+  const [activeUsers, setActiveUsers] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   const {
@@ -41,6 +43,54 @@ export const RetroSession = () => {
     handleEditCard,
     handleDeleteCard,
   } = useRetroSession();
+
+  // Set up user presence tracking
+  useEffect(() => {
+    if (!retroData?.id || !username) return;
+
+    // Track active users in the retrospective
+    const presenceChannel = supabase.channel(`presence-${retroData.id}`);
+    
+    presenceChannel
+      .on('presence', { event: 'sync' }, () => {
+        const state = presenceChannel.presenceState();
+        const users = new Set<string>();
+        
+        Object.values(state).forEach((userList: any) => {
+          userList.forEach((user: any) => {
+            if (user.username) {
+              users.add(user.username);
+            }
+          });
+        });
+        
+        setActiveUsers(users);
+      })
+      .on('presence', { event: 'join' }, ({ newPresences }) => {
+        const joinedUsers = newPresences
+          .filter((p: any) => p.username !== username)
+          .map((p: any) => p.username);
+        
+        if (joinedUsers.length > 0) {
+          toast({
+            title: "Nuovo partecipante",
+            description: `${joinedUsers.join(", ")} si è unito alla retrospettiva`,
+          });
+        }
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await presenceChannel.track({
+            username,
+            online_at: new Date().toISOString(),
+          });
+        }
+      });
+
+    return () => {
+      presenceChannel.unsubscribe();
+    };
+  }, [retroData?.id, username, toast]);
 
   // Group cards by type
   const hotCards = cards.filter(card => card.type === 'hot' && !card.groupId);
@@ -140,38 +190,59 @@ export const RetroSession = () => {
                 )}
               </div>
               
-              <div className="flex space-x-3">
-                <Dialog open={showActionDialog} onOpenChange={setShowActionDialog}>
-                  <DialogTrigger asChild>
-                    <Button 
-                      className="bg-pornoretro-orange text-pornoretro-black hover:bg-pornoretro-darkorange flex"
-                    >
-                      <ClipboardCheck className="mr-2 h-4 w-4" />
-                      Action Items
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="bg-pornoretro-black border-pornoretro-orange/30 max-w-xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle className="text-pornoretro-orange">Action Items</DialogTitle>
-                    </DialogHeader>
-                    <ActionList
-                      actionItems={actionItems}
-                      onToggleComplete={handleToggleActionComplete}
-                      onDelete={handleDeleteAction}
-                      onAdd={handleCreateAction}
-                      cards={cards}
-                      selectedCardId={selectedCardId}
-                    />
-                  </DialogContent>
-                </Dialog>
+              <div className="flex flex-col space-y-3">
+                <div className="flex space-x-3 items-center">
+                  <span className="flex items-center text-sm text-white/60">
+                    <Users className="h-4 w-4 mr-1" />
+                    <span>{activeUsers.size} online</span>
+                  </span>
+                  
+                  <Dialog open={showActionDialog} onOpenChange={setShowActionDialog}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        className="bg-pornoretro-orange text-pornoretro-black hover:bg-pornoretro-darkorange flex"
+                      >
+                        <ClipboardCheck className="mr-2 h-4 w-4" />
+                        Action Items
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="bg-pornoretro-black border-pornoretro-orange/30 max-w-xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle className="text-pornoretro-orange">Action Items</DialogTitle>
+                      </DialogHeader>
+                      <ActionList
+                        actionItems={actionItems}
+                        onToggleComplete={handleToggleActionComplete}
+                        onDelete={handleDeleteAction}
+                        onAdd={handleCreateAction}
+                        cards={cards}
+                        selectedCardId={selectedCardId}
+                      />
+                    </DialogContent>
+                  </Dialog>
+                  
+                  <Button 
+                    className="bg-pornoretro-orange text-pornoretro-black hover:bg-pornoretro-darkorange flex"
+                    onClick={handleShareRetro}
+                  >
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Condividi
+                  </Button>
+                </div>
                 
-                <Button 
-                  className="bg-pornoretro-orange text-pornoretro-black hover:bg-pornoretro-darkorange flex"
-                  onClick={handleShareRetro}
-                >
-                  <Share2 className="mr-2 h-4 w-4" />
-                  Condividi
-                </Button>
+                {activeUsers.size > 0 && (
+                  <div className="flex -space-x-2 overflow-hidden">
+                    {Array.from(activeUsers).map((user, i) => (
+                      <div 
+                        key={user} 
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-pornoretro-darkorange text-white border-2 border-pornoretro-black text-xs font-bold uppercase"
+                        title={user}
+                      >
+                        {user.charAt(0)}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

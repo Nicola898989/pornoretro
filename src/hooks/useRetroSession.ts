@@ -58,8 +58,187 @@ export const useRetroSession = () => {
       fetchCards();
       fetchCardGroups();
       fetchActionItems();
+
+      // Set up real-time subscriptions
+      setupRealtimeSubscriptions();
     }
+
+    return () => {
+      // Cleanup subscriptions on unmount
+      cleanupRealtimeSubscriptions();
+    };
   }, [id]);
+
+  // Setup real-time subscriptions for all relevant tables
+  const setupRealtimeSubscriptions = () => {
+    if (!id) return;
+
+    // Subscribe to retro cards changes
+    const cardsChannel = supabase
+      .channel('public:retro_cards')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'retro_cards',
+        filter: `retro_id=eq.${id}`
+      }, (payload) => {
+        console.log('Received real-time card change:', payload);
+        
+        // Handle the different types of changes
+        if (payload.eventType === 'INSERT') {
+          handleRealtimeCardInsert(payload.new);
+        } else if (payload.eventType === 'UPDATE') {
+          handleRealtimeCardUpdate(payload.new);
+        } else if (payload.eventType === 'DELETE') {
+          handleRealtimeCardDelete(payload.old);
+        }
+      })
+      .subscribe();
+
+    // Subscribe to comments changes
+    const commentsChannel = supabase
+      .channel('public:retro_comments')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'retro_comments'
+      }, (payload) => {
+        console.log('Received real-time comment change:', payload);
+        // When comments change, refresh cards to get updated comments
+        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE' || payload.eventType === 'DELETE') {
+          fetchCards();
+        }
+      })
+      .subscribe();
+
+    // Subscribe to votes changes
+    const votesChannel = supabase
+      .channel('public:retro_card_votes')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'retro_card_votes'
+      }, (payload) => {
+        console.log('Received real-time vote change:', payload);
+        // When votes change, refresh cards to get updated vote counts
+        fetchCards();
+      })
+      .subscribe();
+
+    // Subscribe to card groups changes
+    const groupsChannel = supabase
+      .channel('public:retro_card_groups')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'retro_card_groups',
+        filter: `retro_id=eq.${id}`
+      }, (payload) => {
+        console.log('Received real-time group change:', payload);
+        
+        if (payload.eventType === 'INSERT') {
+          setCardGroups(prev => [...prev, payload.new]);
+        } else if (payload.eventType === 'UPDATE') {
+          setCardGroups(prev => 
+            prev.map(group => group.id === payload.new.id ? payload.new : group)
+          );
+        } else if (payload.eventType === 'DELETE') {
+          setCardGroups(prev => 
+            prev.filter(group => group.id !== payload.old.id)
+          );
+        }
+      })
+      .subscribe();
+
+    // Subscribe to action items changes
+    const actionsChannel = supabase
+      .channel('public:retro_actions')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'retro_actions',
+        filter: `retro_id=eq.${id}`
+      }, (payload) => {
+        console.log('Received real-time action change:', payload);
+        
+        if (payload.eventType === 'INSERT') {
+          setActionItems(prev => [...prev, payload.new]);
+        } else if (payload.eventType === 'UPDATE') {
+          setActionItems(prev => 
+            prev.map(action => action.id === payload.new.id ? payload.new : action)
+          );
+        } else if (payload.eventType === 'DELETE') {
+          setActionItems(prev => 
+            prev.filter(action => action.id !== payload.old.id)
+          );
+        }
+      })
+      .subscribe();
+
+    // Store channel references for cleanup
+    return { cardsChannel, commentsChannel, votesChannel, groupsChannel, actionsChannel };
+  };
+
+  // Cleanup function for real-time subscriptions
+  const cleanupRealtimeSubscriptions = () => {
+    supabase.removeAllChannels();
+  };
+
+  // Handle real-time card insert
+  const handleRealtimeCardInsert = (newCard: any) => {
+    // Skip if the card was added by current user (already in state)
+    if (newCard.author === username && !retroData?.is_anonymous) {
+      return;
+    }
+
+    // Convert to our RetroCardType format
+    const processedCard: RetroCardType = {
+      id: newCard.id,
+      type: newCard.type as CardType,
+      content: newCard.content,
+      author: newCard.author,
+      votes: 0, // We'll get actual votes in the next fetch
+      comments: [],
+      groupId: newCard.group_id || undefined
+    };
+
+    // Add to state
+    setCards(prev => {
+      // Make sure we don't add duplicates
+      if (prev.some(card => card.id === processedCard.id)) {
+        return prev;
+      }
+      return [...prev, processedCard];
+    });
+
+    // Notify user about new card (optional)
+    toast({
+      title: "Nuova scheda aggiunta",
+      description: `${processedCard.author} ha aggiunto una nuova scheda`,
+    });
+  };
+
+  // Handle real-time card update
+  const handleRealtimeCardUpdate = (updatedCard: any) => {
+    setCards(prev => 
+      prev.map(card => {
+        if (card.id === updatedCard.id) {
+          return {
+            ...card,
+            content: updatedCard.content,
+            groupId: updatedCard.group_id || undefined,
+            // Keep existing comments and votes as they are not included in the update payload
+          };
+        }
+        return card;
+      })
+    );
+  };
+
+  // Handle real-time card delete
+  const handleRealtimeCardDelete = (deletedCard: any) => {
+    setCards(prev => prev.filter(card => card.id !== deletedCard.id));
+  };
 
   const fetchRetroData = async () => {
     const { data, error } = await supabase
@@ -185,23 +364,26 @@ export const useRetroSession = () => {
     }
 
     try {
+      const newCard = {
+        retro_id: id,
+        type: type,
+        content: content.trim(),
+        author: retroData.is_anonymous ? 'Anonymous' : username,
+      };
+      
       const { error } = await supabase
         .from('retro_cards')
-        .insert({
-          retro_id: id,
-          type: type,
-          content: content.trim(),
-          author: retroData.is_anonymous ? 'Anonymous' : username,
-        });
+        .insert(newCard);
 
       if (error) throw error;
 
+      // We don't need to update local state directly as the real-time subscription will handle it
+      // This avoids duplicate cards in the UI
+      
       toast({
         title: "Scheda aggiunta!",
         description: "La tua scheda è stata aggiunta alla retrospettiva",
       });
-
-      fetchCards();
     } catch (error) {
       console.error("Error adding card:", error);
       toast({
@@ -421,7 +603,7 @@ export const useRetroSession = () => {
         description: "Il tuo commento è stato modificato",
       });
 
-      fetchCards();
+      // Real-time subscription will update UI
     } catch (error) {
       console.error("Error updating comment:", error);
       toast({
@@ -446,7 +628,7 @@ export const useRetroSession = () => {
         description: "Il commento è stato eliminato",
       });
 
-      fetchCards();
+      // Real-time subscription will update UI
     } catch (error) {
       console.error("Error deleting comment:", error);
       toast({
@@ -623,6 +805,7 @@ export const useRetroSession = () => {
         return;
       }
       
+      // Update local state immediately for better UX
       setCards(prevCards => 
         prevCards.map(card => 
           card.id === cardId 
@@ -637,7 +820,7 @@ export const useRetroSession = () => {
         .eq('id', cardId);
 
       if (error) {
-        await fetchCards();
+        await fetchCards(); // Revert if error
         throw error;
       }
 
@@ -646,6 +829,7 @@ export const useRetroSession = () => {
         description: "Il contenuto della card è stato aggiornato",
       });
 
+      // Real-time subscription will update UI for other users
     } catch (error) {
       console.error("Error updating card:", error);
       toast({
@@ -670,7 +854,7 @@ export const useRetroSession = () => {
         description: "La card è stata eliminata con successo",
       });
 
-      fetchCards();
+      // Real-time subscription will update UI
     } catch (error) {
       console.error("Error deleting card:", error);
       toast({
