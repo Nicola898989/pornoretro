@@ -57,7 +57,7 @@ const ActionList: React.FC<ActionListProps> = ({
               <ActionItem
                 key={item.id}
                 item={item}
-                onToggleComplete={onToggleActionComplete}
+                onToggleComplete={onToggleComplete}
                 onDelete={onDelete}
               />
             ))}
@@ -79,7 +79,7 @@ const ActionList: React.FC<ActionListProps> = ({
               <ActionItem
                 key={item.id}
                 item={item}
-                onToggleComplete={onToggleActionComplete}
+                onToggleComplete={onToggleComplete}
                 onDelete={onDelete}
               />
             ))}

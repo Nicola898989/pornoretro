@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
@@ -137,10 +138,11 @@ export const useRetroSession = () => {
         console.log('Received real-time group change:', payload);
         
         if (payload.eventType === 'INSERT') {
-          setCardGroups(prev => [...prev, payload.new]);
+          // Ensure we cast the new data to CardGroup type
+          setCardGroups(prev => [...prev, payload.new as CardGroup]);
         } else if (payload.eventType === 'UPDATE') {
           setCardGroups(prev => 
-            prev.map(group => group.id === payload.new.id ? payload.new : group)
+            prev.map(group => group.id === payload.new.id ? payload.new as CardGroup : group)
           );
         } else if (payload.eventType === 'DELETE') {
           setCardGroups(prev => 
@@ -162,10 +164,11 @@ export const useRetroSession = () => {
         console.log('Received real-time action change:', payload);
         
         if (payload.eventType === 'INSERT') {
-          setActionItems(prev => [...prev, payload.new]);
+          // Ensure we cast the new data to ActionItemType
+          setActionItems(prev => [...prev, payload.new as ActionItemType]);
         } else if (payload.eventType === 'UPDATE') {
           setActionItems(prev => 
-            prev.map(action => action.id === payload.new.id ? payload.new : action)
+            prev.map(action => action.id === payload.new.id ? payload.new as ActionItemType : action)
           );
         } else if (payload.eventType === 'DELETE') {
           setActionItems(prev => 
