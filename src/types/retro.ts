@@ -17,6 +17,9 @@ export interface RetroCardComment {
   createdAt: string;
 }
 
+// Also export Comment as an alias for RetroCardComment for backwards compatibility
+export type Comment = RetroCardComment;
+
 export interface RetroCardType {
   id: string;
   type: CardType;
@@ -49,3 +52,4 @@ export interface ActionItemType {
   linked_card_type: string | null;
   created_at: string;
 }
+

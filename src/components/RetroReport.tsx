@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { FileText, Download } from 'lucide-react';
-import { CardType } from './RetroCard';
+import { CardType } from '@/types/retro';
 
 interface ReportCardData {
   id: string;

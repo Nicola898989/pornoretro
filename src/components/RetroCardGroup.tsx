@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import RetroCard, { CardType, Comment } from './RetroCard';
+import RetroCard from './RetroCard';
+import { CardType, Comment } from '@/types/retro';
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

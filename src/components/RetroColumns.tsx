@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import RetroCard from './RetroCard';
 import RetroCardGroup from './RetroCardGroup';
 import { Flame, ThumbsDown, HeartHandshake, Plus } from 'lucide-react';
-import { RetroCardType, CardGroup } from '@/hooks/useRetroSession';
+import { RetroCardType, CardGroup, CardType } from '@/types/retro';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -12,7 +12,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from '@/components/ui/textarea';
-import { CardType } from './RetroCard';
 
 interface RetroColumnProps {
   title: string;
