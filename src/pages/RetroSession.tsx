@@ -1,25 +1,23 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRetroSession } from '@/hooks/useRetroSession';
+import { useRetroPresence } from '@/hooks/useRetroRealtime';
 import RetroColumns from '@/components/RetroColumns';
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Flame, ThumbsDown, HeartHandshake, ClipboardCheck, Share2, Users } from 'lucide-react';
-import { RetroCardType } from '@/hooks/useRetroSession';
-import { CardType } from '@/components/RetroCard';
+import { RetroCardType } from '@/types/retro';
+import { CardType } from '@/types/retro';
 import ActionList from '@/components/ActionList';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from "@/integrations/supabase/client";
 
 export const RetroSession = () => {
   const [activeTab, setActiveTab] = useState("all");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showActionDialog, setShowActionDialog] = useState(false);
   const [selectedCardId, setSelectedCardId] = useState<string | undefined>(undefined);
-  const [activeUsers, setActiveUsers] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   const {
@@ -44,53 +42,8 @@ export const RetroSession = () => {
     handleDeleteCard,
   } = useRetroSession();
 
-  // Set up user presence tracking
-  useEffect(() => {
-    if (!retroData?.id || !username) return;
-
-    // Track active users in the retrospective
-    const presenceChannel = supabase.channel(`presence-${retroData.id}`);
-    
-    presenceChannel
-      .on('presence', { event: 'sync' }, () => {
-        const state = presenceChannel.presenceState();
-        const users = new Set<string>();
-        
-        Object.values(state).forEach((userList: any) => {
-          userList.forEach((user: any) => {
-            if (user.username) {
-              users.add(user.username);
-            }
-          });
-        });
-        
-        setActiveUsers(users);
-      })
-      .on('presence', { event: 'join' }, ({ newPresences }) => {
-        const joinedUsers = newPresences
-          .filter((p: any) => p.username !== username)
-          .map((p: any) => p.username);
-        
-        if (joinedUsers.length > 0) {
-          toast({
-            title: "Nuovo partecipante",
-            description: `${joinedUsers.join(", ")} si è unito alla retrospettiva`,
-          });
-        }
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await presenceChannel.track({
-            username,
-            online_at: new Date().toISOString(),
-          });
-        }
-      });
-
-    return () => {
-      presenceChannel.unsubscribe();
-    };
-  }, [retroData?.id, username, toast]);
+  // Use the new presence hook
+  const { activeUsers } = useRetroPresence(retroData?.id, username);
 
   // Group cards by type
   const hotCards = cards.filter(card => card.type === 'hot' && !card.groupId);

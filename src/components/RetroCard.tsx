@@ -1,15 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader } from "@/components/ui/card";
+import React, { useState, useRef } from 'react';
+import { ChevronDown, ChevronUp, MessageCircle, MoreVertical, Check, X, ThumbsUp, Edit, Trash2, Plus } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { ThumbsUp, MessageCircle, PlusCircle, Pencil, Trash, Check, X, LogOut } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +25,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog';
+import { cn } from '@/lib/utils';
+import { CardType } from '@/types/retro';
 
 export type CardType = 'hot' | 'disappointment' | 'fantasy';
 
@@ -311,7 +318,7 @@ const RetroCard: React.FC<RetroCardProps> = ({
               onClick={() => onCreateAction(id)}
               className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
             >
-              <PlusCircle className="w-3 h-3" />
+              <Plus className="w-3 h-3" />
               Action
             </button>
           </div>
@@ -392,7 +399,7 @@ const RetroCard: React.FC<RetroCardProps> = ({
                                     Edit
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => handleDeleteComment(comment.id)}>
-                                    <Trash className="w-4 h-4 mr-2" />
+                                    <Trash2 className="w-4 h-4 mr-2" />
                                     Delete
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>

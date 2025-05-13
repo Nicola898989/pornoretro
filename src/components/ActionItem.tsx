@@ -1,80 +1,119 @@
-
-import React from 'react';
-import { CheckCircle2, Circle, Trash2, Link as LinkIcon } from 'lucide-react';
+import React, { useState } from 'react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { CardType } from './RetroCard';
+import { Trash, Edit, FileText } from 'lucide-react';
+import { RetroCardType, CardType } from '@/types/retro';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 
-export interface ActionItemType {
+export type ActionItemType = {
   id: string;
   text: string;
+  assignee: string | null;
   completed: boolean;
-  assignee: string;
-  linkedCardId?: string;
-  linkedCardContent?: string;
-  linkedCardType?: CardType;
-}
+  linked_card_id: string | null;
+  linked_card_content: string | null;
+  linked_card_type: CardType | null;
+};
 
 interface ActionItemProps {
   item: ActionItemType;
   onToggleComplete: (id: string) => void;
   onDelete: (id: string) => void;
+  cards: RetroCardType[];
 }
 
-const ActionItem: React.FC<ActionItemProps> = ({ item, onToggleComplete, onDelete }) => {
-  const cardTypeColors = {
-    hot: "text-green-400",
-    disappointment: "text-red-400",
-    fantasy: "text-pornoretro-orange"
+const ActionItem: React.FC<ActionItemProps> = ({ item, onToggleComplete, onDelete, cards }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedText, setEditedText] = useState(item.text);
+  const [editedAssignee, setEditedAssignee] = useState(item.assignee || '');
+
+  const handleToggleComplete = () => {
+    onToggleComplete(item.id);
   };
 
+  const handleDelete = () => {
+    onDelete(item.id);
+  };
+
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleSave = () => {
+    // Implement save functionality here (e.g., API call)
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditedText(item.text);
+    setEditedAssignee(item.assignee || '');
+  };
+
+  const linkedCard = cards.find(card => card.id === item.linked_card_id);
+
   return (
-    <div className="flex items-center justify-between p-3 border border-muted rounded-md bg-secondary">
-      <div className="flex items-center gap-3">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => onToggleComplete(item.id)}
-          className="p-0 hover:opacity-70"
+    <div className="flex items-center justify-between p-4 border-b border-pornoretro-orange/30">
+      <div className="flex items-center space-x-3">
+        <Checkbox
+          id={`action-${item.id}`}
+          checked={item.completed}
+          onCheckedChange={handleToggleComplete}
+        />
+        <label
+          htmlFor={`action-${item.id}`}
+          className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${item.completed ? 'line-through text-gray-500' : 'text-white'
+            }`}
         >
-          {item.completed ? (
-            <CheckCircle2 className="h-6 w-6 text-pornoretro-orange" />
+          {isEditing ? (
+            <Textarea
+              value={editedText}
+              onChange={(e) => setEditedText(e.target.value)}
+              className="bg-transparent border border-gray-500 text-white rounded-md p-1 text-sm"
+            />
           ) : (
-            <Circle className="h-6 w-6 text-muted-foreground" />
+            item.text
           )}
-        </Button>
-        
-        <div className="space-y-1">
-          <p className={`${item.completed ? 'line-through text-muted-foreground' : 'text-pornoretro-gray'}`}>
-            {item.text}
-          </p>
-          
-          {item.assignee && (
-            <p className="text-sm text-pornoretro-orange">
-              Assigned to: {item.assignee}
-            </p>
-          )}
-          
-          {item.linkedCardId && item.linkedCardContent && item.linkedCardType && (
-            <div className="flex items-center gap-1 text-xs">
-              <LinkIcon className="h-3 w-3 text-muted-foreground" />
-              <span className="text-muted-foreground">Linked to:</span>
-              <span className={cardTypeColors[item.linkedCardType]}>
-                {item.linkedCardContent.substring(0, 30)}
-                {item.linkedCardContent.length > 30 ? '...' : ''}
-              </span>
-            </div>
-          )}
-        </div>
+        </label>
+        {linkedCard && (
+          <div className="flex items-center space-x-1 text-white/60">
+            <FileText className="h-3 w-3" />
+            <span className="text-xs">{linkedCard.content}</span>
+          </div>
+        )}
       </div>
-      
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        onClick={() => onDelete(item.id)}
-        className="text-muted-foreground hover:text-red-500"
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
+      <div className="flex items-center space-x-2">
+        {isEditing ? (
+          <>
+            <Input
+              type="text"
+              placeholder="Assignee"
+              value={editedAssignee}
+              onChange={(e) => setEditedAssignee(e.target.value)}
+              className="bg-transparent border border-gray-500 text-white rounded-md p-1 text-sm"
+            />
+            <Button variant="secondary" size="icon" onClick={handleSave}>
+              <Check className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={handleCancel}>
+              <X className="h-4 w-4" />
+            </Button>
+          </>
+        ) : (
+          <>
+            {item.assignee && (
+              <div className="text-xs text-white/60">{item.assignee}</div>
+            )}
+            <Button variant="secondary" size="icon" onClick={handleEdit}>
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button variant="destructive" size="icon" onClick={handleDelete}>
+              <Trash className="h-4 w-4" />
+            </Button>
+          </>
+        )}
+      </div>
     </div>
   );
 };
