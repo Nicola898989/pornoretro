@@ -51,7 +51,7 @@ const Index: React.FC = () => {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               <div className="p-6 rounded-lg text-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-[url('/people-meeting.jpg')] bg-center bg-cover opacity-20 blur-md z-0"></div>
+                <div className="absolute inset-0 bg-[url('/diverse-team.jpg')] bg-center bg-cover opacity-20 blur-md z-0"></div>
                 <div className="bg-black/50 absolute inset-0 z-0"></div>
                 <div className="relative z-10">
                   <div className="flex justify-center mb-4">
@@ -64,34 +64,46 @@ const Index: React.FC = () => {
                 </div>
               </div>
               
-              <div className="bg-secondary p-6 rounded-lg text-center">
-                <div className="flex justify-center mb-4">
-                  <div className="bg-pornoretro-orange w-16 h-16 rounded-full flex items-center justify-center">
-                    <ThumbsUp className="h-8 w-8 text-pornoretro-black" />
+              <div className="p-6 rounded-lg text-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-[url('/diverse-team.jpg')] bg-center bg-cover opacity-20 blur-md z-0"></div>
+                <div className="bg-black/50 absolute inset-0 z-0"></div>
+                <div className="relative z-10">
+                  <div className="flex justify-center mb-4">
+                    <div className="bg-pornoretro-orange w-16 h-16 rounded-full flex items-center justify-center">
+                      <ThumbsUp className="h-8 w-8 text-pornoretro-black" />
+                    </div>
                   </div>
+                  <h3 className="text-xl font-bold mb-2">Hot Voting</h3>
+                  <p className="text-muted-foreground">Vote on the issues that matter most to bring them to climax.</p>
                 </div>
-                <h3 className="text-xl font-bold mb-2">Hot Voting</h3>
-                <p className="text-muted-foreground">Vote on the issues that matter most to bring them to climax.</p>
               </div>
               
-              <div className="bg-secondary p-6 rounded-lg text-center">
-                <div className="flex justify-center mb-4">
-                  <div className="bg-pornoretro-orange w-16 h-16 rounded-full flex items-center justify-center">
-                    <Star className="h-8 w-8 text-pornoretro-black" />
+              <div className="p-6 rounded-lg text-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-[url('/diverse-team.jpg')] bg-center bg-cover opacity-20 blur-md z-0"></div>
+                <div className="bg-black/50 absolute inset-0 z-0"></div>
+                <div className="relative z-10">
+                  <div className="flex justify-center mb-4">
+                    <div className="bg-pornoretro-orange w-16 h-16 rounded-full flex items-center justify-center">
+                      <Star className="h-8 w-8 text-pornoretro-black" />
+                    </div>
                   </div>
+                  <h3 className="text-xl font-bold mb-2">Team Fantasies</h3>
+                  <p className="text-muted-foreground">Turn your wildest improvement ideas into actionable tasks.</p>
                 </div>
-                <h3 className="text-xl font-bold mb-2">Team Fantasies</h3>
-                <p className="text-muted-foreground">Turn your wildest improvement ideas into actionable tasks.</p>
               </div>
               
-              <div className="bg-secondary p-6 rounded-lg text-center">
-                <div className="flex justify-center mb-4">
-                  <div className="bg-pornoretro-orange w-16 h-16 rounded-full flex items-center justify-center">
-                    <Play className="h-8 w-8 text-pornoretro-black" />
+              <div className="p-6 rounded-lg text-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-[url('/diverse-team.jpg')] bg-center bg-cover opacity-20 blur-md z-0"></div>
+                <div className="bg-black/50 absolute inset-0 z-0"></div>
+                <div className="relative z-10">
+                  <div className="flex justify-center mb-4">
+                    <div className="bg-pornoretro-orange w-16 h-16 rounded-full flex items-center justify-center">
+                      <Play className="h-8 w-8 text-pornoretro-black" />
+                    </div>
                   </div>
+                  <h3 className="text-xl font-bold mb-2">Action Tracking</h3>
+                  <p className="text-muted-foreground">Follow through on promises with our satisfaction guarantee.</p>
                 </div>
-                <h3 className="text-xl font-bold mb-2">Action Tracking</h3>
-                <p className="text-muted-foreground">Follow through on promises with our satisfaction guarantee.</p>
               </div>
             </div>
           </div>
