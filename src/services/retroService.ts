@@ -20,7 +20,7 @@ export const fetchRetroData = async (retroId: string): Promise<RetroData | null>
 };
 
 // Fetch cards with comments and votes
-export const fetchCards = async (retroId: string): Promise<RetroCardType[]> => {
+export const fetchCards = async (retroId: string): Promise<any[]> => {
   const { data, error } = await supabase
     .from('retro_cards')
     .select(`
@@ -35,24 +35,11 @@ export const fetchCards = async (retroId: string): Promise<RetroCardType[]> => {
     throw error;
   }
 
-  return data.map(card => ({
-    id: card.id,
-    type: card.type as CardType,
-    content: card.content,
-    author: card.author,
-    votes: (card.retro_card_votes || []).length,
-    comments: (card.retro_comments || []).map(comment => ({
-      id: comment.id,
-      author: comment.author,
-      content: comment.content,
-      createdAt: comment.created_at
-    })),
-    groupId: card.group_id || undefined
-  }));
+  return data;
 };
 
 // Get user voted cards
-export const getUserVotedCards = (cards: RetroCardType[], username: string): Set<string> => {
+export const getUserVotedCards = (cards: any[], username: string): Set<string> => {
   const votedCardIds = new Set<string>();
   
   cards.forEach(card => {

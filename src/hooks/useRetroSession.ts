@@ -5,7 +5,8 @@ import { useRetroRealtime } from './useRetroRealtime';
 import * as retroService from '@/services/retroService';
 import { RetroData, RetroCardType, CardGroup, ActionItemType, CardType } from '@/types/retro';
 
-export { RetroData, RetroCardType, CardGroup, ActionItemType, CardType };
+// Use proper syntax for re-exporting types with isolatedModules enabled
+export type { RetroData, RetroCardType, CardGroup, ActionItemType, CardType };
 
 export const useRetroSession = () => {
   const { id } = useParams<{ id: string }>();

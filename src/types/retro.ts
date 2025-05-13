@@ -25,6 +25,10 @@ export interface RetroCardType {
   votes: number;
   comments: RetroCardComment[];
   groupId?: string;
+  // Adding these properties to match the server response
+  retro_comments?: any[];
+  retro_card_votes?: any[];
+  group_id?: string;
 }
 
 export interface CardGroup {

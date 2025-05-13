@@ -6,12 +6,25 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Flame, ThumbsDown, HeartHandshake, ClipboardCheck, Share2, Users } from 'lucide-react';
-import { RetroCardType } from '@/types/retro';
-import { CardType } from '@/types/retro';
+import { RetroCardType, ActionItemType, CardType } from '@/types/retro';
 import ActionList from '@/components/ActionList';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { ActionItemType as ComponentActionItemType } from '@/components/ActionItem';
+
+// Helper function to convert between ActionItemType types
+const convertActionItems = (items: ActionItemType[]): ComponentActionItemType[] => {
+  return items.map(item => ({
+    id: item.id,
+    text: item.text,
+    assignee: item.assignee,
+    completed: item.completed,
+    linked_card_id: item.linked_card_id,
+    linked_card_content: item.linked_card_content,
+    linked_card_type: item.linked_card_type as CardType | null
+  }));
+};
 
 export const RetroSession = () => {
   const [activeTab, setActiveTab] = useState("all");
@@ -125,6 +138,9 @@ export const RetroSession = () => {
     }
   };
 
+  // Convert actionItems to ComponentActionItemType for the ActionList component
+  const convertedActionItems = convertActionItems(actionItems);
+
   return (
     <div className="min-h-screen flex flex-col bg-pornoretro-black">
       <Header />
@@ -164,7 +180,7 @@ export const RetroSession = () => {
                         <DialogTitle className="text-pornoretro-orange">Action Items</DialogTitle>
                       </DialogHeader>
                       <ActionList
-                        actionItems={actionItems}
+                        actionItems={convertedActionItems}
                         onToggleComplete={handleToggleActionComplete}
                         onDelete={handleDeleteAction}
                         onAdd={handleCreateAction}
@@ -373,7 +389,7 @@ export const RetroSession = () => {
               <TabsContent value="actions" className="mt-6">
                 <div className="max-w-2xl mx-auto">
                   <ActionList
-                    actionItems={actionItems}
+                    actionItems={convertedActionItems}
                     onToggleComplete={handleToggleActionComplete}
                     onDelete={handleDeleteAction}
                     onAdd={handleCreateAction}

@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { Trash, Edit, FileText } from 'lucide-react';
-import { RetroCardType, CardType } from '@/types/retro';
+import { Trash, Edit, FileText, Check, X } from 'lucide-react';
+import { CardType } from '@/types/retro';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 
@@ -20,10 +21,16 @@ interface ActionItemProps {
   item: ActionItemType;
   onToggleComplete: (id: string) => void;
   onDelete: (id: string) => void;
-  cards: RetroCardType[];
+  cards?: RetroCardType[];
 }
 
-const ActionItem: React.FC<ActionItemProps> = ({ item, onToggleComplete, onDelete, cards }) => {
+type RetroCardType = {
+  id: string;
+  content: string;
+  type: CardType;
+};
+
+const ActionItem: React.FC<ActionItemProps> = ({ item, onToggleComplete, onDelete, cards = [] }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(item.text);
   const [editedAssignee, setEditedAssignee] = useState(item.assignee || '');

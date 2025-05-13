@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { ChevronDown, ChevronUp, MessageCircle, MoreVertical, Check, X, ThumbsUp, Edit, Trash2, Plus } from 'lucide-react';
+import { ChevronDown, ChevronUp, MessageCircle, MoreVertical, Check, X, ThumbsUp, Edit, Trash2, Plus, LogOut, Pencil, Trash } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -28,8 +28,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { CardType } from '@/types/retro';
-
-export type CardType = 'hot' | 'disappointment' | 'fantasy';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader } from '@/components/ui/card';
 
 export interface Comment {
   id: string;

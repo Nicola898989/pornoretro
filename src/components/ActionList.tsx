@@ -3,7 +3,7 @@ import React from 'react';
 import { ActionItemType } from './ActionItem';
 import ActionItem from './ActionItem';
 import NewActionItemForm from './NewActionItemForm';
-import { CardType } from './RetroCard';
+import { CardType } from '@/types/retro';
 import { RetroCardType } from '@/hooks/useRetroSession';
 
 interface ActionListProps {
@@ -59,6 +59,7 @@ const ActionList: React.FC<ActionListProps> = ({
                 item={item}
                 onToggleComplete={onToggleComplete}
                 onDelete={onDelete}
+                cards={cards}
               />
             ))}
           </div>
@@ -81,6 +82,7 @@ const ActionList: React.FC<ActionListProps> = ({
                 item={item}
                 onToggleComplete={onToggleComplete}
                 onDelete={onDelete}
+                cards={cards}
               />
             ))}
           </div>
