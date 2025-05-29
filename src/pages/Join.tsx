@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { fetchRetroData } from '@/services/retroService';
 
 const Join: React.FC = () => {
   const [retroId, setRetroId] = useState('');
@@ -41,28 +42,18 @@ const Join: React.FC = () => {
     try {
       const providedId = retroId.trim();
       
-      // Check if the retrospective exists using the API
-      const response = await fetch(`/api/retro/${providedId}`);
+      // Check if the retrospective exists using the service
+      const retroData = await fetchRetroData(providedId);
       
-      if (!response.ok) {
-        if (response.status === 404) {
-          toast({
-            title: "Retrospettiva non trovata",
-            description: "Controlla l'ID e riprova",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Errore nel trovare la retrospettiva",
-            description: "Si è verificato un errore imprevisto",
-            variant: "destructive",
-          });
-        }
+      if (!retroData) {
+        toast({
+          title: "Retrospettiva non trovata",
+          description: "Controlla l'ID e riprova",
+          variant: "destructive",
+        });
         setIsLoading(false);
         return;
       }
-      
-      const retroData = await response.json();
       
       // Store the current user name in localStorage
       localStorage.setItem("currentUser", yourName.trim());

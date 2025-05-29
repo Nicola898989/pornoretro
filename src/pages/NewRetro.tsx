@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Lock } from 'lucide-react';
+import { createRetro } from '@/services/retroService';
 
 const NewRetro: React.FC = () => {
   const [retroName, setRetroName] = useState('');
@@ -45,28 +46,16 @@ const NewRetro: React.FC = () => {
       // Store the user as the creator
       localStorage.setItem('currentUser', yourName.trim());
       
-      // Create retrospective using the API
-      const response = await fetch('/api/retro', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id: retroId,
-          name: retroName.trim(),
-          team: teamName.trim(),
-          created_by: yourName.trim(),
-          is_anonymous: isAnonymous
-        }),
+      // Create retrospective using the service (with fallback)
+      await createRetro({
+        id: retroId,
+        name: retroName.trim(),
+        team: teamName.trim(),
+        created_by: yourName.trim(),
+        is_anonymous: isAnonymous
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to create retrospective');
-      }
-
-      const retroData = await response.json();
       
-      console.log("Retrospettiva salvata con successo:", retroData);
+      console.log("Retrospettiva salvata con successo:", retroId);
       
       toast({
         title: "Retrospettiva creata!",
