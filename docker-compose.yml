@@ -1,0 +1,25 @@
+
+version: '3.8'
+
+services:
+  pornoretro:
+    build: .
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./data:/app/server/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    restart: unless-stopped
+
+  # Optional: nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - pornoretro
+    restart: unless-stopped

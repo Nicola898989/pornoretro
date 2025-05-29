@@ -1,10 +1,7 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { FileText, Download } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { CardType } from '@/types/retro';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 interface ReportCardData {
   id: string;
@@ -269,75 +266,6 @@ const RetroReport: React.FC<RetroReportProps> = ({
     URL.revokeObjectURL(url);
   };
 
-  // Funzione per generare e scaricare il PDF
-  const generatePDF = async () => {
-    // Crea un container temporaneo per il report
-    const container = document.createElement('div');
-    container.innerHTML = generateReportContent();
-    container.style.position = 'absolute';
-    container.style.left = '-9999px';
-    container.style.top = '-9999px';
-    document.body.appendChild(container);
-
-    try {
-      // Usa html2canvas per convertire l'HTML in un'immagine canvas
-      const canvas = await html2canvas(container, {
-        scale: 1,
-        useCORS: true,
-        logging: false,
-        allowTaint: true
-      });
-
-      // Crea un nuovo documento PDF
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      // Ottieni le dimensioni del foglio PDF
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      
-      // Calcola il rapporto di scala per adattare il canvas alla pagina PDF
-      const ratio = Math.min(pdfWidth / canvas.width, pdfHeight / canvas.height);
-      
-      // Aggiungi l'immagine al PDF
-      pdf.addImage(
-        canvas.toDataURL('image/jpeg', 1.0),
-        'JPEG',
-        0,
-        0,
-        canvas.width * ratio,
-        canvas.height * ratio
-      );
-
-      // Se il contenuto è più lungo di una pagina, aggiungi pagine aggiuntive
-      if (canvas.height * ratio > pdfHeight) {
-        let pageCount = Math.ceil((canvas.height * ratio) / pdfHeight);
-        for (let i = 1; i < pageCount; i++) {
-          pdf.addPage();
-          pdf.addImage(
-            canvas.toDataURL('image/jpeg', 1.0),
-            'JPEG',
-            0,
-            -(i * pdfHeight),
-            canvas.width * ratio,
-            canvas.height * ratio
-          );
-        }
-      }
-
-      // Scarica il PDF
-      pdf.save(`${retroName.replace(/\s+/g, '-')}-report.pdf`);
-    } catch (error) {
-      console.error('Errore durante la generazione del PDF:', error);
-    } finally {
-      // Rimuovi il container temporaneo
-      document.body.removeChild(container);
-    }
-  };
-
   return (
     <div className="flex space-x-2">
       <Button 
@@ -345,14 +273,7 @@ const RetroReport: React.FC<RetroReportProps> = ({
         className="bg-pornoretro-orange text-pornoretro-black hover:bg-pornoretro-darkorange"
       >
         <FileText className="w-4 h-4 mr-2" />
-        Download HTML
-      </Button>
-      <Button 
-        onClick={generatePDF} 
-        className="bg-pornoretro-orange text-pornoretro-black hover:bg-pornoretro-darkorange"
-      >
-        <Download className="w-4 h-4 mr-2" />
-        Download PDF
+        Download HTML Report
       </Button>
     </div>
   );
