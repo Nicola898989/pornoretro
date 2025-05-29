@@ -10,7 +10,6 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Lock } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 
 const NewRetro: React.FC = () => {
   const [retroName, setRetroName] = useState('');
@@ -46,25 +45,26 @@ const NewRetro: React.FC = () => {
       // Store the user as the creator
       localStorage.setItem('currentUser', yourName.trim());
       
-      // Save data to Supabase
-      const { data: retroData, error } = await supabase
-        .from('retrospectives')
-        .insert([
-          {
-            id: retroId,
-            name: retroName.trim(),
-            team: teamName.trim(),
-            created_by: yourName.trim(),
-            is_anonymous: isAnonymous
-          }
-        ])
-        .select()
-        .single();
-      
-      if (error) {
-        console.error("Errore Supabase:", error);
-        throw new Error(error.message);
+      // Create retrospective using the API
+      const response = await fetch('/api/retro', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: retroId,
+          name: retroName.trim(),
+          team: teamName.trim(),
+          created_by: yourName.trim(),
+          is_anonymous: isAnonymous
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create retrospective');
       }
+
+      const retroData = await response.json();
       
       console.log("Retrospettiva salvata con successo:", retroData);
       

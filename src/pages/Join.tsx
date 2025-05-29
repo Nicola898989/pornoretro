@@ -8,14 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-
-interface RetroInfo {
-  id: string;
-  name: string;
-  team: string;
-  createdAt: string;
-}
 
 const Join: React.FC = () => {
   const [retroId, setRetroId] = useState('');
@@ -47,73 +39,33 @@ const Join: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // First check localStorage for backward compatibility
       const providedId = retroId.trim();
-      const retroKey = `retro_${providedId}`;
-      const localRetroData = localStorage.getItem(retroKey);
       
-      if (localRetroData) {
-        // Local retro exists, use it
-        localStorage.setItem("currentUser", yourName.trim());
-        
-        toast({
-          title: "Entrato con successo!",
-          description: "Benvenuto nella retrospettiva",
-        });
-        
-        navigate(`/retro/${providedId}`);
-        return;
-      }
+      // Check if the retrospective exists using the API
+      const response = await fetch(`/api/retro/${providedId}`);
       
-      // If no local retro, check Supabase
-      console.log("Cerco la retrospettiva con ID:", providedId);
-      
-      const { data: retroData, error } = await supabase
-        .from('retrospectives')
-        .select('*')
-        .eq('id', providedId)
-        .maybeSingle();
-      
-      console.log("Risposta dalla query:", retroData, error);
-      
-      if (error) {
-        console.error("Errore Supabase:", error);
-        toast({
-          title: "Errore nel trovare la retrospettiva",
-          description: error.message || "Si è verificato un errore imprevisto",
-          variant: "destructive",
-        });
+      if (!response.ok) {
+        if (response.status === 404) {
+          toast({
+            title: "Retrospettiva non trovata",
+            description: "Controlla l'ID e riprova",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Errore nel trovare la retrospettiva",
+            description: "Si è verificato un errore imprevisto",
+            variant: "destructive",
+          });
+        }
         setIsLoading(false);
         return;
       }
       
-      if (!retroData) {
-        toast({
-          title: "Retrospettiva non trovata",
-          description: "Controlla l'ID e riprova",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
+      const retroData = await response.json();
       
       // Store the current user name in localStorage
       localStorage.setItem("currentUser", yourName.trim());
-      
-      // Create local storage entry for the retro to ensure compatibility
-      const localRetro = {
-        id: retroData.id,
-        name: retroData.name,
-        team: retroData.team,
-        creator: retroData.created_by,
-        createdAt: retroData.created_at,
-        cards: [],
-        actions: [],
-        isAnonymous: false
-      };
-      
-      // Save to localStorage for compatibility with existing code
-      localStorage.setItem(retroKey, JSON.stringify(localRetro));
       
       toast({
         title: "Entrato con successo!",

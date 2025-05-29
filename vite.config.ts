@@ -7,7 +7,7 @@ import path from "path";
 export default defineConfig({
   server: {
     host: "::",
-    port: 5173,
+    port: 8080,
     proxy: {
       '/api': 'http://localhost:3001',
       '/socket.io': {
