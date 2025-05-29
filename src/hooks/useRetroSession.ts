@@ -216,6 +216,9 @@ export const useRetroSession = () => {
       const author = retroData.is_anonymous ? 'Anonymous' : username;
       await retroService.addCard(id, content, type, author);
       
+      // Ricarica immediatamente le carte per mostrare quella appena aggiunta
+      await fetchCards();
+      
       toast({
         title: "Scheda aggiunta!",
         description: "La tua scheda è stata aggiunta alla retrospettiva",
