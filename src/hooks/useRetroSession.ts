@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
@@ -116,12 +117,18 @@ export const useRetroSession = () => {
 
   const handleCreateGroup = (cardId: string, targetCardId: string) => {
     if (!id) return;
-    const onCardUpdate = () => cardHook.fetchCards(id);
+    const onCardUpdate = async () => {
+      await cardHook.fetchCards(id);
+    };
     return groupHook.handleCreateGroup(id, cardId, targetCardId, cardHook.cards, onCardUpdate);
   };
 
   const handleRemoveCardFromGroup = (cardId: string) => {
-    const onCardUpdate = () => id ? cardHook.fetchCards(id) : Promise.resolve();
+    const onCardUpdate = async () => {
+      if (id) {
+        await cardHook.fetchCards(id);
+      }
+    };
     return groupHook.handleRemoveCardFromGroup(cardId, onCardUpdate);
   };
 
