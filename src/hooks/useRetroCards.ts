@@ -228,6 +228,8 @@ export const useRetroCards = () => {
       return;
     }
     
+    const originalType = currentCard.type; // Store the original type for revert
+    
     try {
       // Update local state immediately for better UX
       setCards(prevCards => 
@@ -247,11 +249,11 @@ export const useRetroCards = () => {
     } catch (error) {
       console.error("Error changing card category:", error);
       
-      // Revert local state on error
+      // Revert local state on error using the stored original type
       setCards(prevCards => 
         prevCards.map(card => 
           card.id === cardId 
-            ? { ...card, type: currentCard.type } 
+            ? { ...card, type: originalType } 
             : card
         )
       );
