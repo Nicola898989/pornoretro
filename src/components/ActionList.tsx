@@ -1,10 +1,8 @@
-
 import React from 'react';
 import { ActionItemType } from './ActionItem';
 import ActionItem from './ActionItem';
 import NewActionItemForm from './NewActionItemForm';
-import { CardType } from '@/types/retro';
-import { RetroCardType } from '@/hooks/useRetroSession';
+import { CardType, RetroCardType } from '@/types/retro';
 
 interface ActionListProps {
   actionItems: ActionItemType[];
