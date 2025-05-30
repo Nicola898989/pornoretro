@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import * as retroService from '@/services/retroService';
@@ -218,16 +219,16 @@ export const useRetroCards = () => {
   };
 
   const handleChangeCardCategory = async (cardId: string, newType: CardType) => {
+    const currentCard = cards.find(card => card.id === cardId);
+    if (!currentCard || currentCard.type === newType) {
+      toast({
+        title: "Nessun cambiamento",
+        description: "La carta è già in questa categoria",
+      });
+      return;
+    }
+    
     try {
-      const currentCard = cards.find(card => card.id === cardId);
-      if (!currentCard || currentCard.type === newType) {
-        toast({
-          title: "Nessun cambiamento",
-          description: "La carta è già in questa categoria",
-        });
-        return;
-      }
-      
       // Update local state immediately for better UX
       setCards(prevCards => 
         prevCards.map(card => 
