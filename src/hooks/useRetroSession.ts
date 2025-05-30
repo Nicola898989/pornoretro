@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useToast } from "@/hooks/use-toast";
@@ -131,6 +130,10 @@ export const useRetroSession = () => {
     if (id) groupHook.fetchCardGroups(id);
   };
 
+  const handleChangeCardCategory = (cardId: string, newType: CardType) => {
+    return cardHook.handleChangeCardCategory(cardId, newType);
+  };
+
   return {
     retroData,
     cards: cardHook.cards,
@@ -151,5 +154,6 @@ export const useRetroSession = () => {
     handleEditGroupTitle,
     handleEditCard: cardHook.handleEditCard,
     handleDeleteCard: cardHook.handleDeleteCard,
+    handleChangeCardCategory,
   };
 };

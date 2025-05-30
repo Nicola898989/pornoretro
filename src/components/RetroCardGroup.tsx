@@ -39,6 +39,7 @@ interface RetroCardGroupProps {
   onAddToGroup?: (cardId: string, groupId: string) => void;
   onEdit?: (cardId: string, newContent: string) => void;
   onDelete?: (cardId: string) => void;
+  onChangeCategory?: (cardId: string, newType: CardType) => void;
 }
 
 const RetroCardGroup: React.FC<RetroCardGroupProps> = ({
@@ -56,7 +57,8 @@ const RetroCardGroup: React.FC<RetroCardGroupProps> = ({
   currentUser,
   onAddToGroup,
   onEdit,
-  onDelete
+  onDelete,
+  onChangeCategory
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [newTitle, setNewTitle] = useState(title);
@@ -176,6 +178,7 @@ const RetroCardGroup: React.FC<RetroCardGroupProps> = ({
                     hasVoted={votedCards.has(primaryCard?.id || '')}
                     currentUser={currentUser}
                     inGroup={true}
+                    onChangeCategory={onChangeCategory}
                   />
                 </div>
                 
@@ -210,6 +213,7 @@ const RetroCardGroup: React.FC<RetroCardGroupProps> = ({
                           hasVoted={votedCards.has(card.id)}
                           currentUser={currentUser}
                           inGroup={true}
+                          onChangeCategory={onChangeCategory}
                         />
                       ))}
                     </div>

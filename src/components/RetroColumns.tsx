@@ -35,6 +35,7 @@ interface RetroColumnProps {
   isSubmitting?: boolean;
   onEditCard: (cardId: string, content: string) => void;
   onDeleteCard: (cardId: string) => void;
+  onChangeCategory?: (cardId: string, newType: CardType) => void;
 }
 
 const RetroColumns: React.FC<RetroColumnProps> = ({
@@ -59,6 +60,7 @@ const RetroColumns: React.FC<RetroColumnProps> = ({
   isSubmitting,
   onEditCard,
   onDeleteCard,
+  onChangeCategory,
 }) => {
   const [newCardContent, setNewCardContent] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -142,6 +144,7 @@ const RetroColumns: React.FC<RetroColumnProps> = ({
           onAddToGroup={handleAddToGroup}
           onEdit={onEditCard}
           onDelete={onDeleteCard}
+          onChangeCategory={onChangeCategory}
         />
       ))}
       
@@ -164,6 +167,7 @@ const RetroColumns: React.FC<RetroColumnProps> = ({
           currentUser={currentUser}
           onEdit={onEditCard}
           onDelete={onDeleteCard}
+          onChangeCategory={onChangeCategory}
         />
       ))}
       

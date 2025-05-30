@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import * as retroService from '@/services/retroService';
@@ -218,6 +217,52 @@ export const useRetroCards = () => {
     setCards(prev => prev.filter(card => card.id !== deletedCard.id));
   };
 
+  const handleChangeCardCategory = async (cardId: string, newType: CardType) => {
+    try {
+      const currentCard = cards.find(card => card.id === cardId);
+      if (!currentCard || currentCard.type === newType) {
+        toast({
+          title: "Nessun cambiamento",
+          description: "La carta è già in questa categoria",
+        });
+        return;
+      }
+      
+      // Update local state immediately for better UX
+      setCards(prevCards => 
+        prevCards.map(card => 
+          card.id === cardId 
+            ? { ...card, type: newType } 
+            : card
+        )
+      );
+
+      await retroService.changeCardCategory(cardId, newType);
+
+      toast({
+        title: "Categoria cambiata",
+        description: `La carta è stata spostata in ${newType === 'hot' ? 'Hot Moments' : newType === 'disappointment' ? 'Disappointments' : 'Team Fantasy'}`,
+      });
+    } catch (error) {
+      console.error("Error changing card category:", error);
+      
+      // Revert local state on error
+      setCards(prevCards => 
+        prevCards.map(card => 
+          card.id === cardId 
+            ? { ...card, type: currentCard.type } 
+            : card
+        )
+      );
+      
+      toast({
+        title: "Errore",
+        description: "Impossibile cambiare la categoria della carta. Riprova più tardi.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return {
     cards,
     votedCards,
@@ -230,5 +275,6 @@ export const useRetroCards = () => {
     insertCard,
     updateCard,
     deleteCard,
+    handleChangeCardCategory,
   };
 };

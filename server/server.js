@@ -246,6 +246,21 @@ app.get('/api/retro/:id/groups', async (req, res) => {
   }
 });
 
+// Change card category
+app.put('/api/cards/:cardId/category', async (req, res) => {
+  try {
+    const { type } = req.body;
+    await dbRun('UPDATE retro_cards SET type = ? WHERE id = ?', [type, req.params.cardId]);
+    
+    const updatedCard = await dbGet('SELECT * FROM retro_cards WHERE id = ?', [req.params.cardId]);
+    io.emit('card_updated', updatedCard);
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Serve React app in production
 if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => {

@@ -53,6 +53,7 @@ export const RetroSession = () => {
     handleEditGroupTitle,
     handleEditCard,
     handleDeleteCard,
+    handleChangeCardCategory,
   } = useRetroSession();
 
   // Use the new presence hook
@@ -250,6 +251,7 @@ export const RetroSession = () => {
                     isSubmitting={isSubmitting}
                     onEditCard={handleEditCard}
                     onDeleteCard={handleDeleteCard}
+                    onChangeCategory={handleChangeCardCategory}
                   />
                   
                   <RetroColumns
@@ -274,6 +276,7 @@ export const RetroSession = () => {
                     isSubmitting={isSubmitting}
                     onEditCard={handleEditCard}
                     onDeleteCard={handleDeleteCard}
+                    onChangeCategory={handleChangeCardCategory}
                   />
                   
                   <RetroColumns
@@ -298,6 +301,7 @@ export const RetroSession = () => {
                     isSubmitting={isSubmitting}
                     onEditCard={handleEditCard}
                     onDeleteCard={handleDeleteCard}
+                    onChangeCategory={handleChangeCardCategory}
                   />
                 </div>
               </TabsContent>
@@ -326,6 +330,7 @@ export const RetroSession = () => {
                     isSubmitting={isSubmitting}
                     onEditCard={handleEditCard}
                     onDeleteCard={handleDeleteCard}
+                    onChangeCategory={handleChangeCardCategory}
                   />
                 </div>
               </TabsContent>
@@ -354,6 +359,7 @@ export const RetroSession = () => {
                     isSubmitting={isSubmitting}
                     onEditCard={handleEditCard}
                     onDeleteCard={handleDeleteCard}
+                    onChangeCategory={handleChangeCardCategory}
                   />
                 </div>
               </TabsContent>
@@ -382,6 +388,7 @@ export const RetroSession = () => {
                     isSubmitting={isSubmitting}
                     onEditCard={handleEditCard}
                     onDeleteCard={handleDeleteCard}
+                    onChangeCategory={handleChangeCardCategory}
                   />
                 </div>
               </TabsContent>

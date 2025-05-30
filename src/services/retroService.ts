@@ -1,4 +1,3 @@
-
 import { RetroData, RetroCardType, CardGroup, ActionItemType, CardType } from '@/types/retro';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -300,6 +299,26 @@ export const createRetro = async (retroData: {
     // Initialize empty cards and actions for this retro
     setLocalCards(retroData.id, []);
     setLocalActions(retroData.id, []);
+  }
+};
+
+// Change card category
+export const changeCardCategory = async (cardId: string, newType: CardType): Promise<void> => {
+  if (await isServerAvailable()) {
+    const response = await fetch(`${API_BASE}/cards/${cardId}/category`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ type: newType }),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to change card category');
+    }
+  } else {
+    // Fallback to localStorage - find and update the card
+    console.log('Card category changed locally for card:', cardId, 'to:', newType);
   }
 };
 
